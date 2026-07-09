@@ -12,6 +12,7 @@
     background: #000; overflow: hidden;
     font-family: Georgia, 'Times New Roman', serif;
   }
+  body.idle-cursor { cursor: none; }
   #stage { position: fixed; inset: 0; }
   .slide {
     position: absolute; inset: 0;
@@ -31,31 +32,38 @@
     from { transform: scale(1.0); }
     to   { transform: scale(1.08); }
   }
-  .meta {
+  .header {
     position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 3.5vw 4vw 3vw;
-    background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 55%, rgba(0,0,0,0) 100%);
+    padding: 3vw 4vw 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,0) 100%);
     color: #f2ede4;
     opacity: 0;
     transform: translateY(12px);
     transition: opacity 0.9s ease, transform 0.9s ease;
   }
-  .meta.show { opacity: 1; transform: translateY(0); }
-  .meta .title { font-size: 2.1vw; font-style: italic; margin: 0 0 0.3vw; line-height: 1.2; }
-  .meta .byline { font-size: 1.25vw; color: #d8cdb8; margin: 0 0 1.1vw; letter-spacing: 0.02em; }
-  .meta .details { display: flex; gap: 2.5vw; max-width: 92vw; }
-  .meta .details .col { flex: 1; min-width: 0; }
-  .meta .details h4 {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 0.85vw; text-transform: uppercase; letter-spacing: 0.12em;
-    color: #b8a98a; margin: 0 0 0.4vw;
+  .header.show { opacity: 1; transform: translateY(0); }
+  .header .title { font-size: 2.3vw; font-style: italic; margin: 0 0 0.3vw; line-height: 1.2; }
+  .header .byline { font-size: 1.35vw; color: #d8cdb8; margin: 0 0 1.4vw; letter-spacing: 0.02em; }
+  .panel {
+    max-width: 78vw;
+    padding-bottom: 3vw;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.7s ease;
   }
-  .meta .details p { font-size: 1.15vw; line-height: 1.42; margin: 0; color: #eee6d8; }
-  .progress { position: absolute; top: 0; left: 0; height: 3px; background: rgba(255,255,255,0.55); width: 0%; }
+  .panel.show { opacity: 1; max-height: none; }
+  .panel h4 {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.95vw; text-transform: uppercase; letter-spacing: 0.12em;
+    color: #b8a98a; margin: 0 0 0.5vw;
+  }
+  .panel p { font-size: 1.35vw; line-height: 1.45; margin: 0; color: #eee6d8; }
+  .progress { position: absolute; top: 0; left: 0; height: 3px; background: rgba(255,255,255,0.55); width: 0%; z-index: 10; }
   #hint {
     position: fixed; top: 2vh; right: 2vw; color: rgba(255,255,255,0.35);
     font-family: Arial, sans-serif; font-size: 0.9vw; text-align: right;
-    transition: opacity 0.4s;
+    transition: opacity 0.4s; z-index: 10;
   }
   #hint.hidden { opacity: 0; }
 </style>
@@ -66,16 +74,26 @@
 <div id="hint">space: pause &middot; &larr;/&rarr;: prev/next</div>
 
 <script>
-// ---- Tunable config (also overridable via URL: ?duration=45&metaFraction=0.3) ----
+// ---- Tunable config ----
+// Each slide plays through four phases, in seconds:
+//   1. imageOnlySec    - painting alone, no text
+//   2. sceneSec        - "The Scene" panel only
+//   3. bigDealSec      - "Why It's a Big Deal" panel only
+//   4. imageOnlyEndSec - painting alone again, before the next work
+// Override via URL, e.g. ?imageOnly=5&scene=15&bigDeal=15&imageOnlyEnd=10
 const CONFIG = {
-  slideDurationSec: 30,   // how long each artwork is shown, in seconds
-  metaFraction: 0.2,      // fraction of slideDurationSec the metadata overlay is visible for (0-1)
+  imageOnlySec: 5,
+  sceneSec: 15,
+  bigDealSec: 15,
+  imageOnlyEndSec: 10,
   shuffle: true,
 };
 (function applyUrlOverrides() {
   const p = new URLSearchParams(location.search);
-  if (p.has('duration')) CONFIG.slideDurationSec = parseFloat(p.get('duration'));
-  if (p.has('metaFraction')) CONFIG.metaFraction = parseFloat(p.get('metaFraction'));
+  if (p.has('imageOnly')) CONFIG.imageOnlySec = parseFloat(p.get('imageOnly'));
+  if (p.has('scene')) CONFIG.sceneSec = parseFloat(p.get('scene'));
+  if (p.has('bigDeal')) CONFIG.bigDealSec = parseFloat(p.get('bigDeal'));
+  if (p.has('imageOnlyEnd')) CONFIG.imageOnlyEndSec = parseFloat(p.get('imageOnlyEnd'));
   if (p.has('shuffle')) CONFIG.shuffle = p.get('shuffle') !== '0';
 })();
 
@@ -105,34 +123,40 @@ function clearTimers() {
   timers = [];
 }
 
-function buildSlide(art) {
-  const el = document.createElement('div');
-  el.className = 'slide';
-  const durMs = CONFIG.slideDurationSec * 1000;
-  el.innerHTML = `
-    <img src="${art.image}" style="--dur:${CONFIG.slideDurationSec + 1.5}s" alt="${escapeHtml(art.title)}">
-    <div class="meta">
-      <div class="title">${escapeHtml(art.title)}</div>
-      <div class="byline">${escapeHtml(art.artist)} &middot; ${escapeHtml(art.year)}</div>
-      <div class="details">
-        <div class="col">
-          <h4>The Scene</h4>
-          <p>${escapeHtml(art.sceneContext)}</p>
-        </div>
-        <div class="col">
-          <h4>Why It's a Big Deal</h4>
-          <p>${escapeHtml(art.whyBigDeal)}</p>
-        </div>
-      </div>
-    </div>
-  `;
-  return el;
+function breakpointsMs() {
+  const t1 = CONFIG.imageOnlySec * 1000;
+  const t2 = t1 + CONFIG.sceneSec * 1000;
+  const t3 = t2 + CONFIG.bigDealSec * 1000;
+  const t4 = t3 + CONFIG.imageOnlyEndSec * 1000;
+  return { t1, t2, t3, t4 };
 }
 
 function escapeHtml(s) {
   const d = document.createElement('div');
   d.textContent = s == null ? '' : s;
   return d.innerHTML;
+}
+
+function buildSlide(art) {
+  const el = document.createElement('div');
+  el.className = 'slide';
+  const { t4 } = breakpointsMs();
+  el.innerHTML = `
+    <img src="${art.image}" style="--dur:${t4 / 1000 + 1.5}s" alt="${escapeHtml(art.title)}">
+    <div class="header">
+      <div class="title">${escapeHtml(art.title)}</div>
+      <div class="byline">${escapeHtml(art.artist)} &middot; ${escapeHtml(art.year)}</div>
+      <div class="panel panel-scene">
+        <h4>The Scene</h4>
+        <p>${escapeHtml(art.sceneContext)}</p>
+      </div>
+      <div class="panel panel-bigdeal">
+        <h4>Why It's a Big Deal</h4>
+        <p>${escapeHtml(art.whyBigDeal)}</p>
+      </div>
+    </div>
+  `;
+  return el;
 }
 
 function showSlide(newIdx) {
@@ -142,40 +166,49 @@ function showSlide(newIdx) {
   stage.appendChild(el);
   requestAnimationFrame(() => el.classList.add('active'));
 
-  // remove previous slide(s) after transition
   const old = Array.from(stage.children).filter(c => c !== el);
   old.forEach(o => { o.classList.remove('active'); setTimeout(() => o.remove(), 1600); });
 
-  const metaEl = el.querySelector('.meta');
-  const durMs = CONFIG.slideDurationSec * 1000;
-  const metaMs = durMs * CONFIG.metaFraction;
-  const metaDelay = durMs - metaMs;
+  el._header = el.querySelector('.header');
+  el._scene = el.querySelector('.panel-scene');
+  el._bigDeal = el.querySelector('.panel-bigdeal');
 
-  runTimeline(el, metaEl, durMs, metaDelay);
+  runTimeline(el, 0);
 }
 
-function runTimeline(el, metaEl, durMs, metaDelay, resumeFrom) {
-  slideStart = Date.now() - (resumeFrom || 0);
+function runTimeline(el, elapsedMs) {
+  const { t1, t2, t3, t4 } = breakpointsMs();
+  slideStart = Date.now() - elapsedMs;
+
   progressEl.style.transition = 'none';
-  progressEl.style.width = ((resumeFrom || 0) / durMs * 100) + '%';
+  progressEl.style.width = (elapsedMs / t4 * 100) + '%';
   requestAnimationFrame(() => {
-    progressEl.style.transition = `width ${(durMs - (resumeFrom||0))}ms linear`;
+    progressEl.style.transition = `width ${t4 - elapsedMs}ms linear`;
     progressEl.style.width = '100%';
   });
 
-  const remainingToMeta = metaDelay - (resumeFrom || 0);
-  if (remainingToMeta <= 0) {
-    metaEl.classList.add('show');
-  } else {
-    timers.push(setTimeout(() => metaEl.classList.add('show'), remainingToMeta));
-  }
+  // Set immediate state based on which phase we're resuming into.
+  const showHeader = elapsedMs >= t1 && elapsedMs < t3;
+  const showScene = elapsedMs >= t1 && elapsedMs < t2;
+  const showBigDeal = elapsedMs >= t2 && elapsedMs < t3;
+  el._header.classList.toggle('show', showHeader);
+  el._scene.classList.toggle('show', showScene);
+  el._bigDeal.classList.toggle('show', showBigDeal);
 
-  const remainingToNext = durMs - (resumeFrom || 0);
-  timers.push(setTimeout(next, remainingToNext));
+  const schedule = (atMs, fn) => {
+    const delay = atMs - elapsedMs;
+    if (delay > 0) timers.push(setTimeout(fn, delay));
+  };
 
-  el._durMs = durMs;
-  el._metaDelay = metaDelay;
-  el._metaEl = metaEl;
+  schedule(t1, () => el._header.classList.add('show'));
+  schedule(t1, () => el._scene.classList.add('show'));
+  schedule(t2, () => el._scene.classList.remove('show'));
+  schedule(t2, () => el._bigDeal.classList.add('show'));
+  schedule(t3, () => el._bigDeal.classList.remove('show'));
+  schedule(t3, () => el._header.classList.remove('show'));
+  schedule(t4, next);
+
+  el._totalMs = t4;
 }
 
 function next() {
@@ -193,12 +226,12 @@ function togglePause() {
   if (!el) return;
   if (paused) {
     clearTimers();
-    remainingOnPause = el._durMs - (Date.now() - slideStart);
+    remainingOnPause = el._totalMs - (Date.now() - slideStart);
     progressEl.style.transition = 'none';
-    const pct = (1 - remainingOnPause / el._durMs) * 100;
+    const pct = (1 - remainingOnPause / el._totalMs) * 100;
     progressEl.style.width = pct + '%';
   } else {
-    runTimeline(el, el._metaEl, el._durMs, el._metaDelay, el._durMs - remainingOnPause);
+    runTimeline(el, el._totalMs - remainingOnPause);
   }
 }
 
@@ -211,6 +244,15 @@ document.addEventListener('keydown', (e) => {
   window._hintTimer = setTimeout(() => hintEl.classList.add('hidden'), 4000);
 });
 window._hintTimer = setTimeout(() => hintEl.classList.add('hidden'), 4000);
+
+// Hide the cursor after a few seconds of no mouse movement (irrelevant on a
+// remote-controlled TV, but keeps things clean when viewed via a casted tab).
+let cursorTimer = setTimeout(() => document.body.classList.add('idle-cursor'), 3000);
+document.addEventListener('mousemove', () => {
+  document.body.classList.remove('idle-cursor');
+  clearTimeout(cursorTimer);
+  cursorTimer = setTimeout(() => document.body.classList.add('idle-cursor'), 3000);
+});
 
 fetch('artworks.json')
   .then(r => r.json())
