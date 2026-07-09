@@ -79,7 +79,7 @@
 //   1. introSec  - painting alone, no text at all
 //   2. sceneSec  - title appears, plus "The Scene" panel
 //   3. bigDealSec - title stays, "The Scene" swaps out for "Why It's a Big Deal"
-//   4. outroSec  - title stays, both panels hidden, painting continues alone
+//   4. outroSec  - all text hidden, painting alone in full, unobstructed
 // Override via URL, e.g. ?intro=20&scene=30&bigDeal=30&outro=45
 const CONFIG = {
   introSec: 20,
@@ -188,8 +188,9 @@ function runTimeline(el, elapsedMs) {
   });
 
   // Set immediate state based on which phase we're resuming into.
-  // Header (title/byline) shows from t1 onward and stays through the outro.
-  const showHeader = elapsedMs >= t1 && elapsedMs < t4;
+  // Header (title/byline) shows during scene + big deal, hidden in outro so
+  // the painting is unobstructed at the end.
+  const showHeader = elapsedMs >= t1 && elapsedMs < t3;
   const showScene = elapsedMs >= t1 && elapsedMs < t2;
   const showBigDeal = elapsedMs >= t2 && elapsedMs < t3;
   el._header.classList.toggle('show', showHeader);
@@ -206,6 +207,7 @@ function runTimeline(el, elapsedMs) {
   schedule(t2, () => el._scene.classList.remove('show'));
   schedule(t2, () => el._bigDeal.classList.add('show'));
   schedule(t3, () => el._bigDeal.classList.remove('show'));
+  schedule(t3, () => el._header.classList.remove('show'));
   schedule(t4, next);
 
   el._totalMs = t4;
