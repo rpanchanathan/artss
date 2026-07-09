@@ -71,29 +71,29 @@
 <body>
 <div id="stage"></div>
 <div class="progress" id="progress"></div>
-<div id="hint">space: pause &middot; &larr;/&rarr;: prev/next</div>
+<div id="hint">space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase</div>
 
 <script>
 // ---- Tunable config ----
 // Each slide plays through four phases, in seconds:
-//   1. imageOnlySec    - painting alone, no text
-//   2. sceneSec        - "The Scene" panel only
-//   3. bigDealSec      - "Why It's a Big Deal" panel only
-//   4. imageOnlyEndSec - painting alone again, before the next work
-// Override via URL, e.g. ?imageOnly=5&scene=15&bigDeal=15&imageOnlyEnd=10
+//   1. introSec  - painting alone, no text at all
+//   2. sceneSec  - title appears, plus "The Scene" panel
+//   3. bigDealSec - title stays, "The Scene" swaps out for "Why It's a Big Deal"
+//   4. outroSec  - title stays, both panels hidden, painting continues alone
+// Override via URL, e.g. ?intro=20&scene=30&bigDeal=30&outro=45
 const CONFIG = {
-  imageOnlySec: 5,
-  sceneSec: 15,
-  bigDealSec: 15,
-  imageOnlyEndSec: 10,
+  introSec: 20,
+  sceneSec: 30,
+  bigDealSec: 30,
+  outroSec: 45,
   shuffle: true,
 };
 (function applyUrlOverrides() {
   const p = new URLSearchParams(location.search);
-  if (p.has('imageOnly')) CONFIG.imageOnlySec = parseFloat(p.get('imageOnly'));
+  if (p.has('intro')) CONFIG.introSec = parseFloat(p.get('intro'));
   if (p.has('scene')) CONFIG.sceneSec = parseFloat(p.get('scene'));
   if (p.has('bigDeal')) CONFIG.bigDealSec = parseFloat(p.get('bigDeal'));
-  if (p.has('imageOnlyEnd')) CONFIG.imageOnlyEndSec = parseFloat(p.get('imageOnlyEnd'));
+  if (p.has('outro')) CONFIG.outroSec = parseFloat(p.get('outro'));
   if (p.has('shuffle')) CONFIG.shuffle = p.get('shuffle') !== '0';
 })();
 
@@ -124,10 +124,10 @@ function clearTimers() {
 }
 
 function breakpointsMs() {
-  const t1 = CONFIG.imageOnlySec * 1000;
+  const t1 = CONFIG.introSec * 1000;
   const t2 = t1 + CONFIG.sceneSec * 1000;
   const t3 = t2 + CONFIG.bigDealSec * 1000;
-  const t4 = t3 + CONFIG.imageOnlyEndSec * 1000;
+  const t4 = t3 + CONFIG.outroSec * 1000;
   return { t1, t2, t3, t4 };
 }
 
@@ -188,7 +188,8 @@ function runTimeline(el, elapsedMs) {
   });
 
   // Set immediate state based on which phase we're resuming into.
-  const showHeader = elapsedMs >= t1 && elapsedMs < t3;
+  // Header (title/byline) shows from t1 onward and stays through the outro.
+  const showHeader = elapsedMs >= t1 && elapsedMs < t4;
   const showScene = elapsedMs >= t1 && elapsedMs < t2;
   const showBigDeal = elapsedMs >= t2 && elapsedMs < t3;
   el._header.classList.toggle('show', showHeader);
@@ -205,7 +206,6 @@ function runTimeline(el, elapsedMs) {
   schedule(t2, () => el._scene.classList.remove('show'));
   schedule(t2, () => el._bigDeal.classList.add('show'));
   schedule(t3, () => el._bigDeal.classList.remove('show'));
-  schedule(t3, () => el._header.classList.remove('show'));
   schedule(t4, next);
 
   el._totalMs = t4;
@@ -218,6 +218,24 @@ function next() {
 function prev() {
   idx = (idx - 1 + order.length) % order.length;
   showSlide(idx);
+}
+
+// Jump straight to the next phase (intro -> scene -> big deal -> outro -> next
+// painting). Lets you skip ahead once you no longer need the full dwell time
+// on a given phase.
+function skipForward() {
+  const el = stage.querySelector('.slide.active');
+  if (!el) return;
+  const elapsed = paused ? (el._totalMs - remainingOnPause) : (Date.now() - slideStart);
+  const { t1, t2, t3, t4 } = breakpointsMs();
+  const nextBp = [t1, t2, t3, t4].find(t => t > elapsed + 50);
+  if (nextBp === undefined) {
+    next();
+    return;
+  }
+  clearTimers();
+  paused = false;
+  runTimeline(el, nextBp >= t4 ? t4 - 1 : nextBp);
 }
 
 function togglePause() {
@@ -237,7 +255,7 @@ function togglePause() {
 
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space') { e.preventDefault(); togglePause(); }
-  else if (e.code === 'ArrowRight') next();
+  else if (e.code === 'ArrowRight') skipForward();
   else if (e.code === 'ArrowLeft') prev();
   hintEl.classList.remove('hidden');
   clearTimeout(window._hintTimer);
