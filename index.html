@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Classic Art Screensaver</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #000; overflow: hidden;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  #stage { position: fixed; inset: 0; }
+  .slide {
+    position: absolute; inset: 0;
+    opacity: 0;
+    transition: opacity 1.4s ease;
+    pointer-events: none;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  .slide img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    background: #000;
+    animation: kenburns var(--dur) ease-in-out forwards;
+  }
+  @keyframes kenburns {
+    from { transform: scale(1.0); }
+    to   { transform: scale(1.08); }
+  }
+  .meta {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 3.5vw 4vw 3vw;
+    background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 55%, rgba(0,0,0,0) 100%);
+    color: #f2ede4;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+  .meta.show { opacity: 1; transform: translateY(0); }
+  .meta .title { font-size: 2.1vw; font-style: italic; margin: 0 0 0.3vw; line-height: 1.2; }
+  .meta .byline { font-size: 1.25vw; color: #d8cdb8; margin: 0 0 1.1vw; letter-spacing: 0.02em; }
+  .meta .details { display: flex; gap: 2.5vw; max-width: 92vw; }
+  .meta .details .col { flex: 1; min-width: 0; }
+  .meta .details h4 {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.85vw; text-transform: uppercase; letter-spacing: 0.12em;
+    color: #b8a98a; margin: 0 0 0.4vw;
+  }
+  .meta .details p { font-size: 1.15vw; line-height: 1.42; margin: 0; color: #eee6d8; }
+  .progress { position: absolute; top: 0; left: 0; height: 3px; background: rgba(255,255,255,0.55); width: 0%; }
+  #hint {
+    position: fixed; top: 2vh; right: 2vw; color: rgba(255,255,255,0.35);
+    font-family: Arial, sans-serif; font-size: 0.9vw; text-align: right;
+    transition: opacity 0.4s;
+  }
+  #hint.hidden { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div class="progress" id="progress"></div>
+<div id="hint">space: pause &middot; &larr;/&rarr;: prev/next</div>
+
+<script>
+// ---- Tunable config (also overridable via URL: ?duration=45&metaFraction=0.3) ----
+const CONFIG = {
+  slideDurationSec: 30,   // how long each artwork is shown, in seconds
+  metaFraction: 0.2,      // fraction of slideDurationSec the metadata overlay is visible for (0-1)
+  shuffle: true,
+};
+(function applyUrlOverrides() {
+  const p = new URLSearchParams(location.search);
+  if (p.has('duration')) CONFIG.slideDurationSec = parseFloat(p.get('duration'));
+  if (p.has('metaFraction')) CONFIG.metaFraction = parseFloat(p.get('metaFraction'));
+  if (p.has('shuffle')) CONFIG.shuffle = p.get('shuffle') !== '0';
+})();
+
+const stage = document.getElementById('stage');
+const progressEl = document.getElementById('progress');
+const hintEl = document.getElementById('hint');
+
+let artworks = [];
+let order = [];
+let idx = 0;
+let paused = false;
+let timers = [];
+let slideStart = 0;
+let remainingOnPause = null;
+
+function shuffleArr(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function clearTimers() {
+  timers.forEach(t => clearTimeout(t));
+  timers = [];
+}
+
+function buildSlide(art) {
+  const el = document.createElement('div');
+  el.className = 'slide';
+  const durMs = CONFIG.slideDurationSec * 1000;
+  el.innerHTML = `
+    <img src="${art.image}" style="--dur:${CONFIG.slideDurationSec + 1.5}s" alt="${escapeHtml(art.title)}">
+    <div class="meta">
+      <div class="title">${escapeHtml(art.title)}</div>
+      <div class="byline">${escapeHtml(art.artist)} &middot; ${escapeHtml(art.year)}</div>
+      <div class="details">
+        <div class="col">
+          <h4>The Scene</h4>
+          <p>${escapeHtml(art.sceneContext)}</p>
+        </div>
+        <div class="col">
+          <h4>Why It's a Big Deal</h4>
+          <p>${escapeHtml(art.whyBigDeal)}</p>
+        </div>
+      </div>
+    </div>
+  `;
+  return el;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : s;
+  return d.innerHTML;
+}
+
+function showSlide(newIdx) {
+  clearTimers();
+  const art = artworks[order[newIdx]];
+  const el = buildSlide(art);
+  stage.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('active'));
+
+  // remove previous slide(s) after transition
+  const old = Array.from(stage.children).filter(c => c !== el);
+  old.forEach(o => { o.classList.remove('active'); setTimeout(() => o.remove(), 1600); });
+
+  const metaEl = el.querySelector('.meta');
+  const durMs = CONFIG.slideDurationSec * 1000;
+  const metaMs = durMs * CONFIG.metaFraction;
+  const metaDelay = durMs - metaMs;
+
+  runTimeline(el, metaEl, durMs, metaDelay);
+}
+
+function runTimeline(el, metaEl, durMs, metaDelay, resumeFrom) {
+  slideStart = Date.now() - (resumeFrom || 0);
+  progressEl.style.transition = 'none';
+  progressEl.style.width = ((resumeFrom || 0) / durMs * 100) + '%';
+  requestAnimationFrame(() => {
+    progressEl.style.transition = `width ${(durMs - (resumeFrom||0))}ms linear`;
+    progressEl.style.width = '100%';
+  });
+
+  const remainingToMeta = metaDelay - (resumeFrom || 0);
+  if (remainingToMeta <= 0) {
+    metaEl.classList.add('show');
+  } else {
+    timers.push(setTimeout(() => metaEl.classList.add('show'), remainingToMeta));
+  }
+
+  const remainingToNext = durMs - (resumeFrom || 0);
+  timers.push(setTimeout(next, remainingToNext));
+
+  el._durMs = durMs;
+  el._metaDelay = metaDelay;
+  el._metaEl = metaEl;
+}
+
+function next() {
+  idx = (idx + 1) % order.length;
+  showSlide(idx);
+}
+function prev() {
+  idx = (idx - 1 + order.length) % order.length;
+  showSlide(idx);
+}
+
+function togglePause() {
+  paused = !paused;
+  const el = stage.querySelector('.slide.active');
+  if (!el) return;
+  if (paused) {
+    clearTimers();
+    remainingOnPause = el._durMs - (Date.now() - slideStart);
+    progressEl.style.transition = 'none';
+    const pct = (1 - remainingOnPause / el._durMs) * 100;
+    progressEl.style.width = pct + '%';
+  } else {
+    runTimeline(el, el._metaEl, el._durMs, el._metaDelay, el._durMs - remainingOnPause);
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+  else if (e.code === 'ArrowRight') next();
+  else if (e.code === 'ArrowLeft') prev();
+  hintEl.classList.remove('hidden');
+  clearTimeout(window._hintTimer);
+  window._hintTimer = setTimeout(() => hintEl.classList.add('hidden'), 4000);
+});
+window._hintTimer = setTimeout(() => hintEl.classList.add('hidden'), 4000);
+
+fetch('artworks.json')
+  .then(r => r.json())
+  .then(data => {
+    artworks = data;
+    order = CONFIG.shuffle ? shuffleArr(artworks.map((_, i) => i)) : artworks.map((_, i) => i);
+    showSlide(0);
+  })
+  .catch(err => {
+    stage.innerHTML = `<div style="color:#fff;padding:4vw;font-family:sans-serif">Failed to load artworks.json: ${err}</div>`;
+  });
+</script>
+</body>
+</html>
