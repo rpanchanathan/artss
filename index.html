@@ -59,6 +59,22 @@
     color: #b8a98a; margin: 0 0 0.5vw;
   }
   .panel p { font-size: 1.35vw; line-height: 1.45; margin: 0; color: #eee6d8; }
+  /* Split layout: painting left, text right, only while text is showing.
+     Reuses the .header.show timing (same t1-t3 window) via .split-active. */
+  body.layout-split .slide.split-active { display: flex; flex-direction: row; }
+  body.layout-split .slide.split-active img {
+    position: relative; flex: 0 0 58%; width: 58%; height: 100%;
+  }
+  body.layout-split .slide.split-active .header {
+    position: relative; flex: 0 0 42%; width: 42%; height: 100%; inset: auto;
+    background: linear-gradient(180deg, #0b0b0b, #050505);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 3vw; transform: none;
+  }
+  body.layout-split .slide.split-active .header .title { font-size: 1.7vw; }
+  body.layout-split .slide.split-active .header .byline { font-size: 1.1vw; }
+  body.layout-split .slide.split-active .panel { max-width: none; }
+  body.layout-split .slide.split-active .panel p { font-size: 1.15vw; }
   .progress { position: absolute; top: 0; left: 0; height: 3px; background: rgba(255,255,255,0.55); width: 0%; z-index: 10; }
   #hint {
     position: fixed; top: 2vh; right: 2vw; color: rgba(255,255,255,0.35);
@@ -87,6 +103,7 @@ const CONFIG = {
   bigDealSec: 30,
   outroSec: 45,
   shuffle: true,
+  layoutSplit: false,
 };
 (function applyUrlOverrides() {
   const p = new URLSearchParams(location.search);
@@ -95,7 +112,9 @@ const CONFIG = {
   if (p.has('bigDeal')) CONFIG.bigDealSec = parseFloat(p.get('bigDeal'));
   if (p.has('outro')) CONFIG.outroSec = parseFloat(p.get('outro'));
   if (p.has('shuffle')) CONFIG.shuffle = p.get('shuffle') !== '0';
+  if (p.get('layout') === 'split') CONFIG.layoutSplit = true;
 })();
+if (CONFIG.layoutSplit) document.body.classList.add('layout-split');
 
 const stage = document.getElementById('stage');
 const progressEl = document.getElementById('progress');
@@ -196,18 +215,19 @@ function runTimeline(el, elapsedMs) {
   el._header.classList.toggle('show', showHeader);
   el._scene.classList.toggle('show', showScene);
   el._bigDeal.classList.toggle('show', showBigDeal);
+  el.classList.toggle('split-active', showHeader);
 
   const schedule = (atMs, fn) => {
     const delay = atMs - elapsedMs;
     if (delay > 0) timers.push(setTimeout(fn, delay));
   };
 
-  schedule(t1, () => el._header.classList.add('show'));
+  schedule(t1, () => { el._header.classList.add('show'); el.classList.add('split-active'); });
   schedule(t1, () => el._scene.classList.add('show'));
   schedule(t2, () => el._scene.classList.remove('show'));
   schedule(t2, () => el._bigDeal.classList.add('show'));
   schedule(t3, () => el._bigDeal.classList.remove('show'));
-  schedule(t3, () => el._header.classList.remove('show'));
+  schedule(t3, () => { el._header.classList.remove('show'); el.classList.remove('split-active'); });
   schedule(t4, next);
 
   el._totalMs = t4;
