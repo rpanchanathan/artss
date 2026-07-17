@@ -94,7 +94,7 @@
 <body>
 <div id="stage"></div>
 <div class="progress" id="progress"></div>
-<div id="hint">space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; +/-: show more/less often</div>
+<div id="hint">space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; &uarr;/&darr;: show more/less often</div>
 <div id="toast"></div>
 
 <script>
@@ -336,8 +336,8 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'Space') { e.preventDefault(); togglePause(); }
   else if (e.code === 'ArrowRight') skipForward();
   else if (e.code === 'ArrowLeft') prev();
-  else if (e.code === 'Equal' || e.code === 'NumpadAdd') adjustFrequency(1.6, 'Will show this more often');
-  else if (e.code === 'Minus' || e.code === 'NumpadSubtract') adjustFrequency(1 / 1.6, 'Will show this less often');
+  else if (e.code === 'Equal' || e.code === 'NumpadAdd' || e.code === 'ArrowUp') adjustFrequency(1.6, 'Will show this more often');
+  else if (e.code === 'Minus' || e.code === 'NumpadSubtract' || e.code === 'ArrowDown') adjustFrequency(1 / 1.6, 'Will show this less often');
   hintEl.classList.remove('hidden');
   clearTimeout(window._hintTimer);
   window._hintTimer = setTimeout(() => hintEl.classList.add('hidden'), 4000);
