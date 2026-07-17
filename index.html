@@ -82,12 +82,20 @@
     transition: opacity 0.4s; z-index: 10;
   }
   #hint.hidden { opacity: 0; }
+  #toast {
+    position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%) translateY(8px);
+    color: #f2ede4; background: rgba(0,0,0,0.75); border: 1px solid rgba(255,255,255,0.15);
+    padding: 0.6vw 1.2vw; border-radius: 6px; font-family: Arial, sans-serif; font-size: 0.95vw;
+    opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; z-index: 10; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 <div id="stage"></div>
 <div class="progress" id="progress"></div>
-<div id="hint">space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase</div>
+<div id="hint">space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; +/-: show more/less often</div>
+<div id="toast"></div>
 
 <script>
 // ---- Tunable config ----
@@ -119,6 +127,7 @@ if (CONFIG.layoutSplit) document.body.classList.add('layout-split');
 const stage = document.getElementById('stage');
 const progressEl = document.getElementById('progress');
 const hintEl = document.getElementById('hint');
+const toastEl = document.getElementById('toast');
 
 let artworks = [];
 let order = [];
@@ -128,13 +137,53 @@ let timers = [];
 let slideStart = 0;
 let remainingOnPause = null;
 
-function shuffleArr(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+// ---- Per-device viewing stats (localStorage), Anki-style frequency control ----
+// Each artwork gets a seen count (deprioritizes it as it repeats) and a user
+// multiplier (adjustable live with +/-, so "show this more/less often" sticks
+// across sessions on this device).
+const STATS_KEY = 'artss-stats-v1';
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveStats() {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch {}
+}
+let stats = loadStats();
+function statFor(id) {
+  if (!stats[id]) stats[id] = { seen: 0, mult: 1 };
+  return stats[id];
+}
+function weightFor(art) {
+  const s = statFor(art.id);
+  return s.mult / (1 + s.seen);
+}
+
+// Weighted random permutation (Efraimidis-Spirakis A-ES): higher weight ==
+// more likely to land earlier in the shuffled order, without ever excluding
+// low-weight items outright.
+function buildWeightedOrder(indices) {
+  return indices
+    .map(i => ({ i, key: Math.pow(Math.random(), 1 / weightFor(artworks[i])) }))
+    .sort((a, b) => b.key - a.key)
+    .map(x => x.i);
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+function adjustFrequency(factor, label) {
+  if (!order.length) return;
+  const art = artworks[order[idx]];
+  const s = statFor(art.id);
+  s.mult = Math.max(0.15, Math.min(6, s.mult * factor));
+  saveStats();
+  showToast(label);
 }
 
 function clearTimers() {
@@ -181,6 +230,8 @@ function buildSlide(art) {
 function showSlide(newIdx) {
   clearTimers();
   const art = artworks[order[newIdx]];
+  statFor(art.id).seen++;
+  saveStats();
   const el = buildSlide(art);
   stage.appendChild(el);
   requestAnimationFrame(() => el.classList.add('active'));
@@ -234,7 +285,13 @@ function runTimeline(el, elapsedMs) {
 }
 
 function next() {
-  idx = (idx + 1) % order.length;
+  idx = idx + 1;
+  if (idx >= order.length) {
+    idx = 0;
+    // Full pass done — rebuild the weighted order using updated seen counts
+    // and any +/- adjustments made during this pass.
+    if (CONFIG.shuffle) order = buildWeightedOrder(artworks.map((_, i) => i));
+  }
   showSlide(idx);
 }
 function prev() {
@@ -279,6 +336,8 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'Space') { e.preventDefault(); togglePause(); }
   else if (e.code === 'ArrowRight') skipForward();
   else if (e.code === 'ArrowLeft') prev();
+  else if (e.code === 'Equal' || e.code === 'NumpadAdd') adjustFrequency(1.6, 'Will show this more often');
+  else if (e.code === 'Minus' || e.code === 'NumpadSubtract') adjustFrequency(1 / 1.6, 'Will show this less often');
   hintEl.classList.remove('hidden');
   clearTimeout(window._hintTimer);
   window._hintTimer = setTimeout(() => hintEl.classList.add('hidden'), 4000);
@@ -298,7 +357,7 @@ fetch('artworks.json')
   .then(r => r.json())
   .then(data => {
     artworks = data;
-    order = CONFIG.shuffle ? shuffleArr(artworks.map((_, i) => i)) : artworks.map((_, i) => i);
+    order = CONFIG.shuffle ? buildWeightedOrder(artworks.map((_, i) => i)) : artworks.map((_, i) => i);
     showSlide(0);
   })
   .catch(err => {
