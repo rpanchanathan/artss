@@ -43,7 +43,9 @@ Example: `https://rpanchanathan.github.io/artss/?intro=10&scene=20&bigDeal=20&ou
 ## What's in it
 
 - `index.html` — the whole app. No build step, no dependencies.
-- `artworks.json` — 310 entries. Images are hotlinked from the Met's open-access collection.
+- `artworks.json` — 310 entries. Images are hotlinked from six museums' open-access
+  collections: Cleveland Museum of Art (119), The Met (99), Rijksmuseum (25),
+  Smithsonian (23), National Gallery of Art DC (22), Victoria & Albert Museum (22).
 
 Each entry looks like:
 
