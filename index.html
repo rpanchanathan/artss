@@ -60,21 +60,57 @@
   }
   .panel p { font-size: 1.35vw; line-height: 1.45; margin: 0; color: #eee6d8; }
   /* Split layout: painting left, text right, only while text is showing.
-     Reuses the .header.show timing (same t1-t3 window) via .split-active. */
-  body.layout-split .slide.split-active { display: flex; flex-direction: row; }
-  body.layout-split .slide.split-active img {
+     Reuses the .header.show timing (same t1-t3 window) via .split-active.
+     Applied per-slide via .split (set from the artwork's stored aspect ratio),
+     so portrait paintings get the tall half of the screen instead of being
+     letterboxed into a narrow column with black bars either side. */
+  .slide.split.split-active { display: flex; flex-direction: row; }
+  .slide.split.split-active img {
     position: relative; flex: 0 0 58%; width: 58%; height: 100%;
   }
-  body.layout-split .slide.split-active .header {
+  .slide.split.split-active .header {
     position: relative; flex: 0 0 42%; width: 42%; height: 100%; inset: auto;
     background: linear-gradient(180deg, #0b0b0b, #050505);
     display: flex; flex-direction: column; justify-content: center;
     padding: 3vw; transform: none;
   }
-  body.layout-split .slide.split-active .header .title { font-size: 1.7vw; }
-  body.layout-split .slide.split-active .header .byline { font-size: 1.1vw; }
-  body.layout-split .slide.split-active .panel { max-width: none; }
-  body.layout-split .slide.split-active .panel p { font-size: 1.15vw; }
+  .slide.split.split-active .header .title { font-size: 1.7vw; }
+  .slide.split.split-active .header .byline { font-size: 1.1vw; }
+  .slide.split.split-active .panel { max-width: none; }
+  .slide.split.split-active .panel p { font-size: 1.15vw; }
+
+  /* Ultra-tall works (hanging scrolls, ratio < 0.5) can't fill any layout by
+     fitting whole — at 0.29 a scroll fits into a 300px sliver on a 1080p
+     screen. Instead blow them up past the screen height and pan slowly down,
+     which is how you'd actually read a scroll and shows far more detail.
+     These slides hold the split geometry for their whole run rather than
+     toggling at t1/t3, so the pan never has to survive a reflow. */
+  .slide.scroll { display: flex; flex-direction: row; overflow: hidden; }
+  .slide.scroll .scroll-col {
+    position: relative; flex: 0 0 58%; width: 58%; height: 100%;
+    overflow: hidden;
+  }
+  .slide.scroll .scroll-col img {
+    position: absolute; top: 0; left: 50%;
+    width: var(--imgw); height: auto;
+    max-width: none; max-height: none;
+    object-fit: fill;
+    animation: scrollpan var(--dur) ease-in-out forwards;
+  }
+  .slide.scroll .header {
+    position: relative; flex: 0 0 42%; width: 42%; height: 100%; inset: auto;
+    background: linear-gradient(180deg, #0b0b0b, #050505);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 3vw; transform: none;
+  }
+  .slide.scroll .header .title { font-size: 1.7vw; }
+  .slide.scroll .header .byline { font-size: 1.1vw; }
+  .slide.scroll .panel { max-width: none; }
+  .slide.scroll .panel p { font-size: 1.15vw; }
+  @keyframes scrollpan {
+    from { transform: translate(-50%, 0); }
+    to   { transform: translate(-50%, calc(-1 * var(--overflow))); }
+  }
   .progress { position: absolute; top: 0; left: 0; height: 3px; background: rgba(255,255,255,0.55); width: 0%; z-index: 10; }
   #hint {
     position: fixed; top: 2vh; right: 2vw; color: rgba(255,255,255,0.35);
@@ -111,8 +147,21 @@ const CONFIG = {
   bigDealSec: 30,
   outroSec: 45,
   shuffle: true,
-  layoutSplit: false,
+  // 'auto'  - split layout for anything taller than SPLIT_MAX_RATIO (default)
+  // 'split' - force split for every work
+  // 'fit'   - never split; letterbox everything (the old behaviour)
+  layout: 'auto',
+  filterArtist: null,
+  filterTags: null,
 };
+// Anything narrower than this gets the tall half of the screen rather than
+// being letterboxed. 1.15 catches portrait and square works; a half-screen
+// column on 16:9 is 8:9 (0.89), which is close to the shape of most portrait
+// paintings, so they end up bigger than they were fitted whole.
+const SPLIT_MAX_RATIO = 1.15;
+// Below this, fitting whole is hopeless — pan instead.
+const SCROLL_MAX_RATIO = 0.5;
+
 (function applyUrlOverrides() {
   const p = new URLSearchParams(location.search);
   if (p.has('intro')) CONFIG.introSec = parseFloat(p.get('intro'));
@@ -120,9 +169,34 @@ const CONFIG = {
   if (p.has('bigDeal')) CONFIG.bigDealSec = parseFloat(p.get('bigDeal'));
   if (p.has('outro')) CONFIG.outroSec = parseFloat(p.get('outro'));
   if (p.has('shuffle')) CONFIG.shuffle = p.get('shuffle') !== '0';
-  if (p.get('layout') === 'split') CONFIG.layoutSplit = true;
+  const layout = p.get('layout');
+  if (layout === 'split' || layout === 'fit' || layout === 'auto') CONFIG.layout = layout;
+  if (p.has('artist')) CONFIG.filterArtist = p.get('artist').toLowerCase();
+  if (p.has('tags')) CONFIG.filterTags = p.get('tags').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
 })();
-if (CONFIG.layoutSplit) document.body.classList.add('layout-split');
+
+function ratioOf(art) {
+  return (art.w && art.h) ? art.w / art.h : 1.4; // unmeasured: assume landscape
+}
+function isScroll(art) {
+  return CONFIG.layout !== 'fit' && ratioOf(art) < SCROLL_MAX_RATIO;
+}
+function isSplit(art) {
+  if (CONFIG.layout === 'fit') return false;
+  if (CONFIG.layout === 'split') return true;
+  return ratioOf(art) < SPLIT_MAX_RATIO;
+}
+
+// Filter by artist substring and/or tags. Tags match if the artwork carries
+// every tag asked for, so ?tags=impressionism,france narrows rather than widens.
+function matchesFilters(art) {
+  if (CONFIG.filterArtist && !art.artist.toLowerCase().includes(CONFIG.filterArtist)) return false;
+  if (CONFIG.filterTags) {
+    const tags = (art.tags || []).map(t => t.toLowerCase());
+    if (!CONFIG.filterTags.every(t => tags.includes(t))) return false;
+  }
+  return true;
+}
 
 const stage = document.getElementById('stage');
 const progressEl = document.getElementById('progress');
@@ -207,10 +281,12 @@ function escapeHtml(s) {
 
 function buildSlide(art) {
   const el = document.createElement('div');
-  el.className = 'slide';
+  const scroll = isScroll(art);
+  el.className = 'slide' + (scroll ? ' scroll' : (isSplit(art) ? ' split' : ''));
   const { t4 } = breakpointsMs();
-  el.innerHTML = `
-    <img src="${art.image}" style="--dur:${t4 / 1000 + 1.5}s" alt="${escapeHtml(art.title)}">
+  const durSec = t4 / 1000 + 1.5;
+
+  const header = `
     <div class="header">
       <div class="title">${escapeHtml(art.title)}</div>
       <div class="byline">${escapeHtml(art.artist)} &middot; ${escapeHtml(art.year)}</div>
@@ -222,8 +298,24 @@ function buildSlide(art) {
         <h4>Why It's a Big Deal</h4>
         <p>${escapeHtml(art.whyBigDeal)}</p>
       </div>
-    </div>
-  `;
+    </div>`;
+
+  if (scroll) {
+    // Blow the scroll up to fill most of its column, then pan down whatever
+    // hangs past the bottom of the screen. Ken Burns is disabled here — the
+    // pan is the movement.
+    const colW = window.innerWidth * 0.58;
+    const imgW = colW * 0.86;
+    const imgH = imgW / ratioOf(art);
+    const overflow = Math.max(0, imgH - window.innerHeight);
+    el.innerHTML = `
+      <div class="scroll-col" style="--imgw:${imgW}px; --overflow:${overflow}px">
+        <img src="${art.image}" style="--dur:${durSec}s" alt="${escapeHtml(art.title)}">
+      </div>${header}`;
+  } else {
+    el.innerHTML = `
+      <img src="${art.image}" style="--dur:${durSec}s" alt="${escapeHtml(art.title)}">${header}`;
+  }
   return el;
 }
 
@@ -356,7 +448,16 @@ document.addEventListener('mousemove', () => {
 fetch('artworks.json')
   .then(r => r.json())
   .then(data => {
-    artworks = data;
+    const all = data;
+    artworks = all.filter(matchesFilters);
+    if (!artworks.length) {
+      stage.innerHTML = `<div style="color:#fff;padding:4vw;font-family:sans-serif">
+        No artworks match that filter. ${all.length} in the collection.</div>`;
+      return;
+    }
+    if (artworks.length < all.length) {
+      showToast(`${artworks.length} of ${all.length} artworks match this filter`);
+    }
     order = CONFIG.shuffle ? buildWeightedOrder(artworks.map((_, i) => i)) : artworks.map((_, i) => i);
     showSlide(0);
   })
