@@ -377,6 +377,14 @@ function runTimeline(el, elapsedMs) {
 }
 
 function next() {
+  // Swap in a newly-fetched collection here rather than mid-slide, since
+  // `order` holds indices into `artworks` and would be stale the moment the
+  // list changes.
+  if (pendingArtworks) {
+    applyPending();
+    showSlide(idx);
+    return;
+  }
   idx = idx + 1;
   if (idx >= order.length) {
     idx = 0;
@@ -445,6 +453,36 @@ document.addEventListener('mousemove', () => {
   cursorTimer = setTimeout(() => document.body.classList.add('idle-cursor'), 3000);
 });
 
+// A screensaver left running on a TV never reloads, so it would otherwise
+// keep whatever list it fetched on the day it was switched on. Re-check
+// periodically and swap the collection in at the next slide boundary, so new
+// artworks appear without interrupting the painting on screen.
+const REFRESH_MS = 30 * 60 * 1000;
+let pendingArtworks = null;
+
+function applyPending() {
+  if (!pendingArtworks) return;
+  const added = pendingArtworks.length - artworks.length;
+  artworks = pendingArtworks;
+  pendingArtworks = null;
+  order = CONFIG.shuffle ? buildWeightedOrder(artworks.map((_, i) => i)) : artworks.map((_, i) => i);
+  idx = 0;
+  if (added > 0) showToast(`${added} new artwork${added > 1 ? 's' : ''} added`);
+}
+
+function checkForUpdates() {
+  fetch('artworks.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(data => {
+      const next = data.filter(matchesFilters);
+      if (!next.length) return;
+      const changed = next.length !== artworks.length ||
+        next.some((a, i) => a.id !== artworks[i]?.id);
+      if (changed) pendingArtworks = next;
+    })
+    .catch(() => { /* offline or a bad deploy: keep showing what we have */ });
+}
+
 fetch('artworks.json')
   .then(r => r.json())
   .then(data => {
@@ -460,6 +498,7 @@ fetch('artworks.json')
     }
     order = CONFIG.shuffle ? buildWeightedOrder(artworks.map((_, i) => i)) : artworks.map((_, i) => i);
     showSlide(0);
+    setInterval(checkForUpdates, REFRESH_MS);
   })
   .catch(err => {
     stage.innerHTML = `<div style="color:#fff;padding:4vw;font-family:sans-serif">Failed to load artworks.json: ${err}</div>`;
