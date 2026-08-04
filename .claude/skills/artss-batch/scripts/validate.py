@@ -27,10 +27,19 @@ def main():
         if v > 1:
             errors.append(f"duplicate id {k} ({v} times)")
 
+    # Same image URL is always a genuine duplicate. Same artist+title is not:
+    # Rembrandt painted many canvases titled "Self-Portrait" and the collection
+    # legitimately holds more than one, so that case only warrants a look.
+    imgs = collections.Counter(a.get("image") for a in arts)
+    for k, v in imgs.items():
+        if v > 1:
+            errors.append(f"duplicate image URL ({v} times): {k}")
+
     seen = collections.Counter((a.get("artist", ""), a.get("title", "")) for a in arts)
     for (artist, title), v in seen.items():
         if v > 1:
-            errors.append(f"duplicate artist+title: {artist} — {title}")
+            warnings.append(f"{v} works share artist+title: {artist} — {title} "
+                            "(fine if genuinely different paintings; check the images)")
 
     for a in arts:
         who = f"{a.get('id')} {a.get('title', '?')[:40]}"
