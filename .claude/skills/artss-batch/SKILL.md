@@ -158,6 +158,12 @@ verified in one step, the work does not go in.
 ## Verification before claiming done
 
 - Every image URL returns 200 and measures ≥ the filter floor.
+- **Verify browser loads sequentially, not as a parallel burst.** Firing 76
+  `new Image()` loads at once made 48 Cleveland URLs appear broken; the same
+  URLs all loaded fine one at a time with a short pause. Cleveland's CDN
+  throttles concurrent requests. A screensaver shows one painting at a time,
+  so a parallel test measures something the app never does — and reports
+  failures that are not real.
 - `artworks.json` parses and every record has all required fields.
 - Load the page locally (`python3 -m http.server`) and confirm the new works
   render in their assigned layout.
