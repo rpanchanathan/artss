@@ -3,7 +3,7 @@
 **Live: https://rpanchanathan.github.io/artss/**
 
 Open it on any screen (TV, laptop, tablet), press F11 / hit fullscreen, and leave it running.
-It cycles through 434 paintings, each shown large with a short note on what was going on when
+It cycles through 518 paintings, each shown large with a short note on what was going on when
 it was painted and why it matters.
 
 ## How a slide plays
@@ -69,7 +69,7 @@ Example: `https://rpanchanathan.github.io/artss/?tags=post-impressionism&intro=1
 ## What's in it
 
 - `index.html` — the whole app. No build step, no dependencies.
-- `artworks.json` — 434 entries. Images are hotlinked from six museums' open-access
+- `artworks.json` — 518 entries. Images are hotlinked from six museums' open-access
   collections: Cleveland Museum of Art, The Met, Rijksmuseum, Smithsonian, National Gallery
   of Art DC, and the Victoria & Albert Museum.
 - `.claude/skills/artss-batch/` — the workflow and scripts for adding to the collection.
