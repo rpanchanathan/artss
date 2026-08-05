@@ -108,6 +108,15 @@ per reason so a batch that mostly bounced is visible rather than looking thin.
 6. **Not a fragment** — no detail shots, no single manuscript pages of pure
    text, no coins or fragments. It has to work as a full screen.
 
+   Islamic and Persian manuscript searches return a great many pure-text pages
+   with illuminated borders. They score *high* on ink coverage, so the ink
+   filter cannot see them — but they are titled honestly, so a title pass
+   removes them cleanly. Drop titles containing: `text page`, `calligraphy`,
+   `persian couplets`, `persian verses:`, `persian prose`, `illuminated
+   folio`, `preface`, `shamsa`, `colophon`, `frontispiece`. The same pass
+   should collapse `(recto)`/`(verso)` records, which museums list as two
+   objects for one physical folio.
+
 ## Per-artwork record
 
 ```json
