@@ -36,6 +36,11 @@ painting and Books of the Dead, Fayum mummy portraits, Nubian frescoes from
 Faras, Fante asafo flags, Mesoamerican codices, Teotihuacan and Maya painting,
 colonial Andean Cusco School canvases, and Arnhem Land rock art.
 
+The harvested pools are cached, gitignored, in `.work/` — `by_artist.json`
+(23,807 Wikidata works across 72 artists), `matched.json`, `imginfo.json`,
+`selected.json` and `region_info.json` (4,003 Commons files). Rebuilding them
+costs about thirty minutes of API calls, so check there before re-harvesting.
+
 **Deliberately excluded, and why** — repeat these decisions rather than
 relitigating them. Contemporary Aboriginal bark and acrylic painting is in
 copyright and controlled by the artists' communities. Wandjina imagery is
