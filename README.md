@@ -24,7 +24,22 @@ Each painting runs through four phases:
 | → | skip to next phase |
 | ↑ / ↓ (or + / −) | show this painting more / less often |
 
-Arrow keys mean a TV remote works as-is.
+Arrow keys mean a TV remote works as-is. The numeric keypad works as arrows too (with Num Lock
+off, numpad 8/4/6/2 act as ↑/←/→/↓).
+
+## On-screen controls
+
+For touch screens and any setup where a keyboard isn't handy, everything above is also available
+without keys:
+
+- A **gear (⚙) button, top-left** opens a *Choose what to show* menu — pick an artist or a
+  style/movement/period from lists (no typing a substring), and choose the layout (Auto / Split
+  view / Full frame). It writes the same URL parameters below and reloads, so there is one
+  filtering path whether the choice came from a typed URL or a tap.
+- A **control bar along the bottom** mirrors the keys: prev · less-often · pause · more-often ·
+  skip. Both the gear and the bar fade out while idle and reappear on any pointer or touch.
+
+`m` or Esc also open/close the menu.
 
 The ↑/↓ frequency preference is stored per device in `localStorage`, along with a seen count —
 paintings you've watched a lot drift back in the rotation, ones you nudge up come round sooner.
@@ -47,7 +62,8 @@ own layout from the artwork's aspect ratio:
 
 ## Filtering
 
-Every artwork carries tags for region, century and (where it belongs to one) movement.
+Either tap the **⚙ menu** (see above) and pick from lists, or set the parameters directly. Every
+artwork carries tags for region, century and (where it belongs to one) movement.
 
 - `?artist=gogh` — substring match on artist name
 - `?tags=impressionism` — single tag
