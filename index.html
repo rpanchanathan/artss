@@ -132,13 +132,130 @@
     opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; z-index: 10; pointer-events: none;
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* On-screen controls + menu — for touch screens and TV remotes that never
+     deliver keydown to the page. Everything here mirrors an existing keyboard
+     action, so the keys still work exactly as before; this is an additional
+     way in, not a replacement. Chrome fades the bar and the gear out together
+     after a few seconds of no pointer activity (same idea as the cursor). */
+  #ui { position: fixed; inset: 0; pointer-events: none; z-index: 20;
+        transition: opacity 0.4s ease; }
+  #ui.idle { opacity: 0; }
+  .ui-btn {
+    pointer-events: auto; cursor: pointer;
+    background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);
+    color: #f2ede4; font-family: Arial, Helvetica, sans-serif;
+    border-radius: 8px; -webkit-tap-highlight-color: transparent;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .ui-btn:hover { background: rgba(0,0,0,0.8); border-color: rgba(255,255,255,0.4); }
+  #gear {
+    position: fixed; top: 2vh; left: 2vw;
+    width: 44px; height: 44px; font-size: 20px;
+  }
+  #controls {
+    position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 1vw;
+  }
+  #controls .ui-btn { width: 44px; height: 44px; font-size: 19px; }
+  #controls .lbl { font-size: 11px; }
+
+  /* Menu overlay — the filter/layout picker. Tap the gear to open. */
+  #menu {
+    position: fixed; inset: 0; z-index: 30;
+    background: rgba(0,0,0,0.82);
+    display: none; align-items: center; justify-content: center;
+    pointer-events: auto;
+  }
+  #menu.open { display: flex; }
+  #menu .card {
+    background: #0d0d0d; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px; padding: 3vh 3vw; width: min(560px, 90vw);
+    max-height: 90vh; overflow-y: auto;
+    font-family: Arial, Helvetica, sans-serif; color: #eee6d8;
+  }
+  #menu h2 { font-family: Georgia, serif; font-style: italic; font-weight: normal;
+             margin: 0 0 0.5em; font-size: 26px; color: #f2ede4; }
+  #menu .row { margin: 1.4em 0; }
+  #menu label { display: block; font-size: 12px; text-transform: uppercase;
+                letter-spacing: 0.1em; color: #b8a98a; margin-bottom: 0.5em; }
+  #menu input, #menu select {
+    width: 100%; padding: 12px 14px; font-size: 16px;
+    background: #1a1a1a; color: #f2ede4;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+  }
+  #menu .seg { display: flex; gap: 8px; }
+  #menu .seg button {
+    flex: 1; padding: 12px; font-size: 14px; cursor: pointer;
+    background: #1a1a1a; color: #cfc7b8;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+  }
+  #menu .seg button.on { background: #b8a98a; color: #111; border-color: #b8a98a; }
+  #menu .actions { display: flex; gap: 10px; margin-top: 2em; }
+  #menu .actions button {
+    flex: 1; padding: 14px; font-size: 16px; cursor: pointer; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+  #menu .apply { background: #f2ede4; color: #111; border-color: #f2ede4; font-weight: bold; }
+  #menu .reset, #menu .close { background: transparent; color: #cfc7b8; }
+  #menu .hint2 { font-size: 12px; color: #8d867a; margin-top: 1.5em; line-height: 1.5; }
 </style>
 </head>
 <body>
 <div id="stage"></div>
 <div class="progress" id="progress"></div>
-<div id="hint">space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; &uarr;/&darr;: show more/less often</div>
+<div id="hint">&#9881; menu &middot; space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; &uarr;/&darr;: show more/less often</div>
 <div id="toast"></div>
+
+<!-- On-screen controls (mirror the keyboard actions, for touch/TV) -->
+<div id="ui">
+  <div id="gear" class="ui-btn" title="Filters &amp; layout">&#9881;</div>
+  <div id="controls">
+    <div class="ui-btn" data-act="prev" title="Previous painting">&#9664;</div>
+    <div class="ui-btn" data-act="less" title="Show this less often">&minus;</div>
+    <div class="ui-btn" data-act="pause" title="Pause / resume">&#10073;&#10073;</div>
+    <div class="ui-btn" data-act="more" title="Show this more often">&plus;</div>
+    <div class="ui-btn" data-act="next" title="Skip to next phase">&#9654;</div>
+  </div>
+</div>
+
+<!-- Filter / layout picker -->
+<div id="menu">
+  <div class="card">
+    <h2>Choose what to show</h2>
+    <div class="row">
+      <label for="m-artist">Artist</label>
+      <input id="m-artist" list="m-artists" placeholder="e.g. Van Gogh — type or leave blank for all" autocomplete="off">
+      <datalist id="m-artists"></datalist>
+    </div>
+    <div class="row">
+      <label for="m-style">Style / movement / region</label>
+      <select id="m-style"><option value="">Any</option></select>
+    </div>
+    <div class="row">
+      <label for="m-period">Period</label>
+      <select id="m-period"><option value="">Any</option></select>
+    </div>
+    <div class="row">
+      <label>Layout</label>
+      <div class="seg" id="m-layout">
+        <button data-layout="auto">Auto</button>
+        <button data-layout="split">Split view</button>
+        <button data-layout="fit">Full frame</button>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="apply" id="m-apply">Show these</button>
+      <button class="reset" id="m-reset">Reset</button>
+      <button class="close" id="m-close">Close</button>
+    </div>
+    <div class="hint2">
+      Auto picks a layout per painting (tall ones get split view). Split view forces the
+      painting-left, text-right layout on everything; Full frame fills the screen and overlays
+      the text. Filters combine — an artist and a movement together show only works matching both.
+    </div>
+  </div>
+</div>
 
 <script>
 // ---- Tunable config ----
@@ -447,11 +564,16 @@ function togglePause() {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') { e.preventDefault(); togglePause(); }
-  else if (e.code === 'ArrowRight') skipForward();
-  else if (e.code === 'ArrowLeft') prev();
-  else if (e.code === 'Equal' || e.code === 'NumpadAdd' || e.code === 'ArrowUp') adjustFrequency(1.6, 'Will show this more often');
-  else if (e.code === 'Minus' || e.code === 'NumpadSubtract' || e.code === 'ArrowDown') adjustFrequency(1 / 1.6, 'Will show this less often');
+  // Match on e.key as well as e.code so the numeric keypad works as arrows.
+  // With Num Lock off, numpad 8/4/6/2 report e.code 'Numpad8' etc. but
+  // e.key 'ArrowUp'/'ArrowLeft'/'ArrowRight'/'ArrowDown' — checking e.key is
+  // what makes a right-hand keypad drive the show.
+  const k = e.key, c = e.code;
+  if (c === 'Space' || k === ' ' || k === 'Spacebar') { e.preventDefault(); togglePause(); }
+  else if (k === 'ArrowRight' || c === 'ArrowRight') skipForward();
+  else if (k === 'ArrowLeft' || c === 'ArrowLeft') prev();
+  else if (k === 'ArrowUp' || c === 'ArrowUp' || k === '+' || c === 'Equal' || c === 'NumpadAdd') adjustFrequency(1.6, 'Will show this more often');
+  else if (k === 'ArrowDown' || c === 'ArrowDown' || k === '-' || c === 'Minus' || c === 'NumpadSubtract') adjustFrequency(1 / 1.6, 'Will show this less often');
   hintEl.classList.remove('hidden');
   clearTimeout(window._hintTimer);
   window._hintTimer = setTimeout(() => hintEl.classList.add('hidden'), 4000);
@@ -465,6 +587,123 @@ document.addEventListener('mousemove', () => {
   document.body.classList.remove('idle-cursor');
   clearTimeout(cursorTimer);
   cursorTimer = setTimeout(() => document.body.classList.add('idle-cursor'), 3000);
+});
+
+// ---- On-screen controls (touch / TV) ----
+// Every button maps to the same function a key would call, so nothing about the
+// keyboard changes. The whole #ui layer fades out when idle and reappears on any
+// pointer or touch activity, so it never sits on top of the art while watching.
+const uiLayer = document.getElementById('ui');
+let uiTimer = null;
+function wakeUI() {
+  uiLayer.classList.remove('idle');
+  clearTimeout(uiTimer);
+  uiTimer = setTimeout(() => uiLayer.classList.add('idle'), 4000);
+}
+['mousemove', 'touchstart', 'pointerdown', 'keydown'].forEach(ev =>
+  document.addEventListener(ev, wakeUI, { passive: true }));
+wakeUI();
+
+const CONTROL_ACTS = {
+  prev: () => prev(),
+  next: () => skipForward(),
+  pause: () => togglePause(),
+  more: () => adjustFrequency(1.6, 'Will show this more often'),
+  less: () => adjustFrequency(1 / 1.6, 'Will show this less often'),
+};
+document.getElementById('controls').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-act]');
+  if (btn) CONTROL_ACTS[btn.dataset.act]?.();
+});
+
+// ---- Filter / layout menu ----
+// The menu writes the same URL params the page already reads at load, then
+// reloads. That reuses matchesFilters()/isSplit() exactly, so there's one code
+// path for filtering whether it came from a typed URL or a tap. localStorage
+// (seen counts, +/- prefs) survives the reload.
+const menuEl = document.getElementById('menu');
+const gearEl = document.getElementById('gear');
+
+// Format tags describe the frame, not the art — never useful as a filter.
+const FORMAT_TAGS = new Set(['portrait-format', 'landscape-format', 'square-format', 'screen']);
+function prettifyTag(t) {
+  return t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+function populateMenu(all) {
+  // Artists: every distinct name, alphabetical, minus the catch-all.
+  const artists = [...new Set(all.map(a => a.artist))]
+    .filter(a => a && a !== 'Unidentified artist')
+    .sort((a, b) => a.localeCompare(b));
+  document.getElementById('m-artists').innerHTML =
+    artists.map(a => `<option value="${a.replace(/"/g, '&quot;')}">`).join('');
+
+  // Tags split into "Period" (centuries) and everything else (style/region),
+  // each ordered by how many works carry it so the useful ones sit at the top.
+  const counts = {};
+  all.forEach(a => (a.tags || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+  const allTags = Object.keys(counts).filter(t => !FORMAT_TAGS.has(t));
+  const isPeriod = t => /(century|bce|ancient|medieval)/i.test(t);
+  const byCount = (a, b) => counts[b] - counts[a];
+
+  const styleSel = document.getElementById('m-style');
+  allTags.filter(t => !isPeriod(t)).sort(byCount).forEach(t => {
+    styleSel.add(new Option(`${prettifyTag(t)} (${counts[t]})`, t));
+  });
+  const periodSel = document.getElementById('m-period');
+  allTags.filter(isPeriod).sort(byCount).forEach(t => {
+    periodSel.add(new Option(`${prettifyTag(t)} (${counts[t]})`, t));
+  });
+
+  // Pre-fill from the current URL so the menu reflects what's on screen.
+  const p = new URLSearchParams(location.search);
+  document.getElementById('m-artist').value = p.get('artist') || '';
+  const urlTags = (p.get('tags') || '').toLowerCase().split(',').map(s => s.trim());
+  if (urlTags.some(t => styleSel.querySelector(`option[value="${t}"]`)))
+    styleSel.value = urlTags.find(t => styleSel.querySelector(`option[value="${t}"]`));
+  if (urlTags.some(t => periodSel.querySelector(`option[value="${t}"]`)))
+    periodSel.value = urlTags.find(t => periodSel.querySelector(`option[value="${t}"]`));
+  setLayoutButtons(CONFIG.layout);
+}
+
+let chosenLayout = CONFIG.layout;
+function setLayoutButtons(v) {
+  chosenLayout = v;
+  document.querySelectorAll('#m-layout button').forEach(b =>
+    b.classList.toggle('on', b.dataset.layout === v));
+}
+document.getElementById('m-layout').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-layout]');
+  if (b) setLayoutButtons(b.dataset.layout);
+});
+
+function openMenu() { menuEl.classList.add('open'); }
+function closeMenu() { menuEl.classList.remove('open'); }
+gearEl.addEventListener('click', openMenu);
+document.getElementById('m-close').addEventListener('click', closeMenu);
+menuEl.addEventListener('click', (e) => { if (e.target === menuEl) closeMenu(); });
+
+document.getElementById('m-apply').addEventListener('click', () => {
+  const params = new URLSearchParams(location.search);
+  const artist = document.getElementById('m-artist').value.trim();
+  const style = document.getElementById('m-style').value;
+  const period = document.getElementById('m-period').value;
+  artist ? params.set('artist', artist) : params.delete('artist');
+  const tags = [style, period].filter(Boolean).join(',');
+  tags ? params.set('tags', tags) : params.delete('tags');
+  chosenLayout && chosenLayout !== 'auto'
+    ? params.set('layout', chosenLayout) : params.delete('layout');
+  location.search = params.toString();
+});
+document.getElementById('m-reset').addEventListener('click', () => {
+  const params = new URLSearchParams(location.search);
+  ['artist', 'tags', 'layout'].forEach(k => params.delete(k));
+  location.search = params.toString();
+});
+
+// 'm' or Escape from a real keyboard still open/close the menu.
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyM') menuEl.classList.contains('open') ? closeMenu() : openMenu();
+  else if (e.code === 'Escape' && menuEl.classList.contains('open')) closeMenu();
 });
 
 // A screensaver left running on a TV never reloads, so it would otherwise
@@ -501,6 +740,7 @@ fetch('artworks.json')
   .then(r => r.json())
   .then(data => {
     const all = data;
+    populateMenu(all);
     artworks = all.filter(matchesFilters);
     if (!artworks.length) {
       stage.innerHTML = `<div style="color:#fff;padding:4vw;font-family:sans-serif">
