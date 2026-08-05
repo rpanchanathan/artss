@@ -22,7 +22,34 @@ python3 .claude/skills/artss-batch/scripts/stats.py
 Batches 1–6 filled every regional and period bucket in the original plan.
 What remains is **not** more depth — it is the canonical works themselves.
 
-### Batch 7 is done; batch 8 is prepared
+### Batches 7 and 8 are done — the collection is at 1028
+
+Batch 7 added 104 celebrated works; batch 8 added 139 (97 more Western canon
+plus 42 from Africa, Oceania and the pre-Columbian Americas). The target range
+was 800–1000 and the collection is now slightly over it, by the owner's
+decision to keep everything written rather than trim to land on the number.
+
+**Africa, Oceania and pre-Columbian America are now represented** — the open
+question recorded below was settled by the owner in favour of including them.
+What went in: Ethiopian Gospel illumination and icons, ancient Egyptian tomb
+painting and Books of the Dead, Fayum mummy portraits, Nubian frescoes from
+Faras, Fante asafo flags, Mesoamerican codices, Teotihuacan and Maya painting,
+colonial Andean Cusco School canvases, and Arnhem Land rock art.
+
+**Deliberately excluded, and why** — repeat these decisions rather than
+relitigating them. Contemporary Aboriginal bark and acrylic painting is in
+copyright and controlled by the artists' communities. Wandjina imagery is
+culturally restricted and was dropped even though Commons hosts it; the
+Arnhem Land sites used (Ubirr, publicly interpreted and jointly managed) are
+ones whose traditional owners have agreed may be photographed and shown.
+
+Still genuinely thin: **Oceania has only three works**, all from Ubirr, because
+in-situ rock art photography is mostly too low-contrast to read full-screen.
+Māori and Hawaiian painted work returned nothing usable. **Bonnard is still
+absent.** Sub-Saharan African rock art (San, Drakensberg) was tried and
+rejected — the paintings are too faint in every available photograph.
+
+### The earlier batch-8 plan (superseded)
 
 Batch 7 added 104 celebrated works and took the collection to 889. Every work
 and every artist named below is now in, except where noted. **Batch 8 needs
@@ -64,7 +91,29 @@ Still out of copyright reach and not worth attempting: Picasso, Matisse after
 1930, Kahlo, Hopper, Wyeth, Dalí, O'Keeffe, Rothko, Pollock, and every Indian
 modern after Sher-Gil (Husain, Souza, Raza, Gaitonde).
 
-### Regions still absent, and why that needs a decision
+### Sourcing outside the museum APIs
+
+For traditions with no open-access museum API, harvest Commons categories —
+but **search for the category name, never guess it**. Fourteen of thirty
+guessed names returned zero: it is "Ethiopian manuscripts" not "Ethiopian
+illuminated manuscripts", "Papyrus of Hunefer" not "Book of the Dead of
+Hunefer", "Burrungkuy (Nourlangie) rock art" not "Kakadu rock art".
+
+Category contents lie about themselves more than museum records do, and only
+the contact sheet catches it. In batch 8: the "Faras Cathedral" and "Faras
+Gallery" categories are mostly photographs of the Warsaw gallery's interior and
+loose architectural fragments, not the frescoes; every high-resolution
+"Bonampak" file is a photograph of the building's exterior rather than the
+murals inside it; "Tassili n'Ajjer" is maps, satellite imagery and colonial-era
+expedition photographs with no rock art in the usable set. Budget for roughly a
+third of a shortlist drawn this way to fail on sight.
+
+Two sources that worked well and are worth going back to: the **Getty's MS 102
+Ethiopian Gospel Book** and **Walters MS W850**, both fully digitised at high
+resolution, and the **Fayum mummy portrait** categories, which hold hundreds of
+flat, frontal, well-lit reproductions.
+
+### Regions still absent, and why that needs a decision *(settled — see above)*
 
 Africa, Oceania and pre-Columbian America have **no** representation. Do not
 repeat the earlier reasoning that their museum holdings are "sculpture rather
@@ -162,6 +211,29 @@ all of which failed silently and each of which cost a rebuild:
   changes, drop the cache rather than skipping what is already there.
 - **Never name a working file after a stdlib module.** A local `select.py`
   shadowed `select` and broke `urllib` with an unrelated-looking traceback.
+- **Build records from the filtered pool, not from the raw hit list.** Keying
+  the raw matches by (artist, title) and taking the first entry silently
+  substituted a smaller duplicate file for ten works in batch 8 — Millet's
+  Sower arrived at 759×1200 instead of 6395×8000. The pool's scored choice must
+  win; the raw list is a fallback only. Batch 7 shipped five works this way
+  before it was caught, including **The Raft of the Medusa as Géricault's oil
+  sketch rather than the Louvre painting**, which the contact sheet passed
+  because a sketch of the Raft still looks like the Raft.
+- **A title match can return a different medium of the same subject.** The
+  first hit for "Jane Avril" was a preparatory drawing, not the 1893 poster the
+  note described. Check the medium against what you wrote, not just the title.
+
+**Deduplicating against the collection.** Two rules, learned the hard way:
+
+- **Do not take the last word of the artist field as the surname.** The
+  collection stores "El Greco (Domenikos Theotokopoulos)", which keys as
+  *theotokopoulos* and therefore never matched a new "El Greco" — so View of
+  Toledo and Laocoön were both added a second time despite already being held
+  from the Met and the NGA. Strip parenthetical real names before keying.
+- **A shared artist and title is not proof of a duplicate.** An automated sweep
+  on that basis deleted Rembrandt's 1659 NGA self-portrait (the collection
+  legitimately holds it alongside the Met's 1660) and one of two different Kano
+  Shōei screens. Cluster them, then look at the images before removing anything.
 
 **Licensing.** Accept only public domain, CC0 and CC-BY variants; record the
 exact licence string. CC licences require visible credit, so fetch the file's
