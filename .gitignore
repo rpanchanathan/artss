@@ -1,3 +1,4 @@
 data/
 .claude/*
 !.claude/skills/
+.work/

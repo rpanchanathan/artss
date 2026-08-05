@@ -22,9 +22,30 @@ python3 .claude/skills/artss-batch/scripts/stats.py
 Batches 1–6 filled every regional and period bucket in the original plan.
 What remains is **not** more depth — it is the canonical works themselves.
 
-### Batches 7–8: the celebrated works (~215 to reach 1000)
+### Batch 7 is done; batch 8 is prepared
 
-The collection has 785 artworks and is missing the Mona Lisa, Las Meninas,
+Batch 7 added 104 celebrated works and took the collection to 889. Every work
+and every artist named below is now in, except where noted. **Batch 8 needs
+~110 more to reach 1000, and the candidates are already picked**: the Wikidata
+harvest produced 300 filtered, licence-checked, deduped works and batch 7 used
+104 of them. The remaining ~195 cover Ingres, Millet, Hogarth, Chardin,
+Fragonard, Watteau, Canaletto, Rubens, Hals, Veronese, Arcimboldo, Bronzino,
+Mantegna, El Greco, Dürer, Blake, Repin, Rousseau, Degas, Renoir, Cézanne,
+Gauguin, Toulouse-Lautrec, Seurat, Schiele, Sargent, Grünewald, Böcklin,
+Fuseli, Wright of Derby, Gainsborough, Constable, Vigée Le Brun and Duccio.
+Rebuild that pool by rerunning the harvest described below — it takes about
+fifteen minutes — then write notes for the ones worth having.
+
+Two gaps batch 7 could not close. **Bonnard** is still absent entirely — his
+only strong candidate was a plate given over to its gilt frame, so source him
+deliberately rather than from a title search. **Seurat's Grande Jatte** is
+unreachable: the painting is at the Art Institute, whose images 403 in a
+browser, and Commons offers only Seurat's studies for it, several of which the
+collection already holds.
+
+### The brief batch 7 worked from (kept for batch 8)
+
+The collection had 785 artworks and was missing the Mona Lisa, Las Meninas,
 The Scream, Starry Night, The Birth of Venus, Girl with a Pearl Earring, The
 Garden of Earthly Delights, The Arnolfini Portrait, The Ambassadors, Hunters
 in the Snow, The Third of May, Liberty Leading the People, The Raft of the
@@ -100,6 +121,47 @@ and the Tagores are in Indian collections, not American ones.
 - **EXIF-rotated photos report swapped w/h.** A stored portrait that measures
   landscape is usually a phone snapshot of a painting in a gallery rather than
   a reproduction — check rather than just correcting the numbers.
+- **`iiurlwidth` is a request, not a promise.** Asking for 3000 returned 3840px
+  files — Commons snaps to its own rendering buckets. The returned
+  `thumbwidth`/`thumbheight` were also wrong for those files. Measure what is
+  actually served; do not write the API's numbers into `w`/`h`.
+- **A generic browser User-Agent is refused, and the refusal reads "Too many
+  requests".** `upload.wikimedia.org` answered 89 of 104 image requests with
+  429 and "your request does not comply with our robot policy" when the UA was
+  a normal Chrome string, having served all 104 minutes earlier under the
+  descriptive UA. So the 429 is UA classification, not rate. **`measure.py` and
+  `sheet.py` both send a generic UA and both fan out in parallel, so both report
+  near-total failure against Commons and neither failure is real.** Use
+  `measure_seq.py` and `sheet_seq.py` for Commons batches.
+
+**Finding a named work on Commons — go through Wikidata, not category names.**
+Query the artwork entity for `P18`, which points at the canonical file. Traps,
+all of which failed silently and each of which cost a rebuild:
+
+- **Never match an artist by English label.** Wikidata spells Bruegel
+  "Pieter Brueghel the Elder" and Goya "Francisco de Goya", so exact-label
+  queries returned *zero* for both. Resolve the artist to a Q-id with
+  `wbsearchentities` first, then query `wdt:P170 wd:Qxxxx`. This is the accent
+  bug again in a new place.
+- **Check what the Q-id actually resolved to.** Filtering search hits on the
+  word "artist" in the description matched "Spanish recording *artist*", so
+  Raphael resolved to a 1960s pop singer and returned no paintings. Fetch the
+  entity's description and confirm it names a painter before trusting it.
+- **Matching a title returns copies and other media.** "Mona Lisa" also returns
+  the Prado copy. Worse, the *same title* returns prints of the painting: the
+  first hit for The Potato Eaters was van Gogh's lithograph and for The Return
+  of the Prodigal Son was Rembrandt's etching. A tie-break on shortest title
+  actively prefers these. Only the contact sheet catches it.
+- **`P31/P279*` is slow enough to look hung** — around 90s per artist. Use a
+  direct `P31` against an explicit `VALUES ?cls` list of painting/drawing/print
+  classes and batch several artists per query with `VALUES ?c`; that runs about
+  five artists per ten seconds.
+- **A partly-filled cache from an earlier query shape is invisible.** Five
+  artists cached under a truncated `LIMIT 400` label query survived the rewrite
+  and silently had no Mona Lisa, Scream or Starry Night in them. When the query
+  changes, drop the cache rather than skipping what is already there.
+- **Never name a working file after a stdlib module.** A local `select.py`
+  shadowed `select` and broke `urllib` with an unrelated-looking traceback.
 
 **Licensing.** Accept only public domain, CC0 and CC-BY variants; record the
 exact licence string. CC licences require visible credit, so fetch the file's
@@ -236,6 +298,9 @@ Rules:
 2. Query sources; assemble ~70 candidates to survive filtering down to ~50.
 3. Fetch and measure every image:
    `python3 .claude/skills/artss-batch/scripts/measure.py candidates.json`
+   **For a Commons batch use `measure_seq.py` instead** — `measure.py`'s
+   parallel fetch with a generic UA reports almost the whole batch as
+   unreachable when none of it is.
 4. Apply the hard filters. Report rejects per reason.
 4b. Score ink coverage and drop blank pages:
    `python3 .claude/skills/artss-batch/scripts/inkscore.py candidates.json --reject-below 0.15`
@@ -251,9 +316,17 @@ Rules:
    a defect. Use 0.05 there. Check what a floor removes before accepting it -
    if a whole region collapses, the filter is measuring the wrong thing.
 5. **Contact sheet** — `python3 .claude/skills/artss-batch/scripts/sheet.py candidates.json`
-   then Read the output image. Look at it. This is where mount-dominated
-   scrolls, damaged works, near-duplicate compositions and bad crops get
-   caught. Do not skip this; it is one image and it catches what no filter can.
+   (`sheet_seq.py` for Commons) then Read the output image. Look at it. This is
+   where mount-dominated scrolls, damaged works, near-duplicate compositions and
+   bad crops get caught. Do not skip this; it is one image and it catches what
+   no filter can.
+
+   In batch 7 it caught five of 105 that every automated check had passed: the
+   Potato Eaters *lithograph* and the Prodigal Son *etching* standing in for the
+   paintings, the National Gallery's Execution of Maximilian, which is
+   fragments remounted with bare canvas between them, a Rouen Cathedral scanned
+   so faded it read as blank, and a Bonnard whose gilt frame took a quarter of
+   the plate. Nothing but looking would have found any of them.
 6. Write `sceneContext` / `whyBigDeal` for the survivors.
 7. Validate: `python3 .claude/skills/artss-batch/scripts/validate.py`
 8. Append to `artworks.json`, commit with the batch focus in the message.
