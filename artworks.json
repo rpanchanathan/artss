@@ -158,7 +158,7 @@
   {
     "id": 436575,
     "title": "View of Toledo",
-    "artist": "El Greco (Domenikos Theotokopoulos)",
+    "artist": "El Greco",
     "artistBio": "Greek, Iráklion (Candia) 1541–1614 Toledo",
     "year": "ca. 1599-1600",
     "medium": "Oil on canvas",
@@ -180,7 +180,7 @@
   {
     "id": 436545,
     "title": "Manuel Osorio Manrique de Zuñiga (1784–1792)",
-    "artist": "Goya (Francisco de Goya y Lucientes)",
+    "artist": "Francisco Goya",
     "artistBio": "Spanish, Fuendetodos 1746–1828 Bordeaux",
     "year": "1787-88",
     "medium": "Oil on canvas",
@@ -202,7 +202,7 @@
   {
     "id": 437869,
     "title": "Juan de Pareja (ca. 1608–1670)",
-    "artist": "Velázquez (Diego Rodríguez de Silva y Velázquez)",
+    "artist": "Diego Velázquez",
     "artistBio": "Spanish, Seville 1599–1660 Madrid",
     "year": "1650",
     "medium": "Oil on canvas",
@@ -224,7 +224,7 @@
   {
     "id": 435844,
     "title": "The Musicians",
-    "artist": "Caravaggio (Michelangelo Merisi)",
+    "artist": "Caravaggio",
     "artistBio": "Italian, Milan or Caravaggio 1571–1610 Porto Ercole",
     "year": "1597",
     "medium": "Oil on canvas",
@@ -468,7 +468,7 @@
   {
     "id": 437826,
     "title": "Venus and Adonis",
-    "artist": "Titian (Tiziano Vecellio)",
+    "artist": "Titian",
     "artistBio": "Italian, Pieve di Cadore ca. 1485/90?–1576 Venice",
     "year": "1550s",
     "medium": "Oil on canvas",
@@ -512,7 +512,7 @@
   {
     "id": 436948,
     "title": "Boy with a Sword",
-    "artist": "Edouard Manet",
+    "artist": "Édouard Manet",
     "artistBio": "French, Paris 1832–1883 Paris",
     "year": "1861",
     "medium": "Oil on canvas",
@@ -535,7 +535,7 @@
   {
     "id": 436105,
     "title": "The Death of Socrates",
-    "artist": "Jacques Louis David",
+    "artist": "Jacques-Louis David",
     "artistBio": "French, Paris 1748–1825 Brussels",
     "year": "1787",
     "medium": "Oil on canvas",
@@ -1010,7 +1010,7 @@
   {
     "id": "cma-122351",
     "title": "The Burning of the Houses of Lords and Commons, 16 October 1834",
-    "artist": "J.M.W. Turner",
+    "artist": "J. M. W. Turner",
     "artistBio": "British, 1775-1851",
     "year": "1835",
     "medium": "Oil on canvas",
@@ -1032,7 +1032,7 @@
   {
     "id": "cma-95263",
     "title": "Queen Mab's Cave",
-    "artist": "J.M.W. Turner",
+    "artist": "J. M. W. Turner",
     "artistBio": "British, 1775-1851",
     "year": "after 1846",
     "medium": "Oil on fabric",
@@ -1960,7 +1960,7 @@
   {
     "id": "met-459016",
     "title": "The Annunciation",
-    "artist": "Botticelli (Alessandro di Mariano Filipepi)",
+    "artist": "Sandro Botticelli",
     "artistBio": "Italian, 1444/45–1510",
     "year": "ca. 1490",
     "medium": "Tempera and gold on wood",
@@ -2552,7 +2552,7 @@
   {
     "id": "met-436570",
     "title": "The Adoration of the Shepherds",
-    "artist": "El Greco (Domenikos Theotokopoulos)",
+    "artist": "El Greco",
     "artistBio": "Greek, active in Spain, 1541–1614",
     "year": "ca. 1605–10",
     "medium": "Oil on canvas",
@@ -2574,7 +2574,7 @@
   {
     "id": "met-337075",
     "title": "Lucretia",
-    "artist": "Raphael (Raffaello Sanzio or Santi)",
+    "artist": "Raphael",
     "artistBio": "Italian, Urbino 1483–1520 Rome",
     "year": "1508–10",
     "medium": "Pen and brown ink over black chalk, partially incised with a stylus (recto); rubbed with black chalk for transfer (verso)",
@@ -2707,7 +2707,7 @@
   {
     "id": "met-435728",
     "title": "The Last Communion of Saint Jerome",
-    "artist": "Botticelli (Alessandro di Mariano Filipepi)",
+    "artist": "Sandro Botticelli",
     "artistBio": "Italian, Florence 1444/45–1510 Florence",
     "year": "early 1490s",
     "medium": "Tempera and gold on wood",
@@ -2750,7 +2750,7 @@
   {
     "id": "met-435802",
     "title": "Portrait of a Young Man",
-    "artist": "Bronzino (Agnolo di Cosimo di Mariano)",
+    "artist": "Agnolo Bronzino",
     "artistBio": "Italian, Monticelli 1503–1572 Florence",
     "year": "1530s",
     "medium": "Oil on wood",
@@ -3319,7 +3319,7 @@
   {
     "id": "cma-104013",
     "title": "Olympia",
-    "artist": "Edouard Manet",
+    "artist": "Édouard Manet",
     "artistBio": "French, 1832-1883",
     "year": "1867",
     "medium": "Etching",
@@ -3342,7 +3342,7 @@
   {
     "id": "cma-119697",
     "title": "Boats at Berck-sur-Mer",
-    "artist": "Edouard Manet",
+    "artist": "Édouard Manet",
     "artistBio": "French, 1832-1883",
     "year": "1873",
     "medium": "Oil on fabric",
@@ -3378,7 +3378,7 @@
     "h": 3400,
     "tags": [
       "19th-century",
-      "china",
+      "france",
       "portrait-format"
     ],
     "license": "public-domain"
@@ -4162,7 +4162,7 @@
   {
     "id": "nga-33253",
     "title": "Laocoön",
-    "artist": "El Greco (Domenikos Theotokopoulos)",
+    "artist": "El Greco",
     "artistBio": "Greek, active in Spain, 1541-1614",
     "year": "c. 1610/1614",
     "medium": "Oil on canvas",
@@ -4272,7 +4272,7 @@
   {
     "id": "nga-43624",
     "title": "The Railway",
-    "artist": "Edouard Manet",
+    "artist": "Édouard Manet",
     "artistBio": "French, 1832-1883",
     "year": "1873",
     "medium": "Oil on canvas",
@@ -4450,7 +4450,7 @@
   {
     "id": "nga-1224",
     "title": "Venice: The Dogana and San Giorgio Maggiore",
-    "artist": "Joseph Mallord William Turner",
+    "artist": "J. M. W. Turner",
     "artistBio": "British, 1775-1851",
     "year": "1834",
     "medium": "Oil on canvas",
@@ -6249,7 +6249,7 @@
   {
     "id": "si-ld1-1643390182193-1643390185372-0",
     "title": "Waves at Matsushima",
-    "artist": "Tawaraya Sotatsu",
+    "artist": "Tawaraya Sōtatsu",
     "artistBio": "Japanese, active ca. 1600-1643, Edo period",
     "year": "17th century",
     "medium": "Ink, color, and gold on paper, pair of six-panel folding screens",
@@ -7444,7 +7444,7 @@
   {
     "id": "met-436947",
     "title": "Boating",
-    "artist": "Edouard Manet",
+    "artist": "Édouard Manet",
     "artistBio": "French, Paris 1832–1883 Paris",
     "year": "1874",
     "medium": "Oil on canvas",
@@ -7467,7 +7467,7 @@
   {
     "id": "met-436950",
     "title": "The Dead Christ with Angels",
-    "artist": "Edouard Manet",
+    "artist": "Édouard Manet",
     "artistBio": "French, Paris 1832–1883 Paris",
     "year": "1864",
     "medium": "Oil on canvas",
@@ -7490,7 +7490,7 @@
   {
     "id": "met-436965",
     "title": "The Monet Family in Their Garden at Argenteuil",
-    "artist": "Edouard Manet",
+    "artist": "Édouard Manet",
     "artistBio": "French, Paris 1832–1883 Paris",
     "year": "1874",
     "medium": "Oil on canvas",
@@ -7513,7 +7513,7 @@
   {
     "id": "cma-135336",
     "title": "Berthe Morisot with a Muff",
-    "artist": "Edouard Manet",
+    "artist": "Édouard Manet",
     "artistBio": "Édouard Manet (French, 1832–1883)",
     "year": "c. 1871–72",
     "medium": "oil on canvas",
@@ -9828,7 +9828,7 @@
   {
     "id": "met-437870",
     "title": "María Teresa (1638–1683), Infanta of Spain",
-    "artist": "Velázquez (Diego Rodríguez de Silva y Velázquez)",
+    "artist": "Diego Velázquez",
     "artistBio": "Spanish, Seville 1599–1660 Madrid",
     "year": "1651–54",
     "medium": "Oil on canvas",
@@ -9850,7 +9850,7 @@
   {
     "id": "cma-144588",
     "title": "Saint Ambrose",
-    "artist": "Francisco de Goya",
+    "artist": "Francisco Goya",
     "artistBio": "Francisco de Goya (Spanish, 1746–1828)",
     "year": "c. 1796–99",
     "medium": "oil on canvas",
@@ -10117,7 +10117,7 @@
   {
     "id": "met-437873",
     "title": "Philip IV (1605–1665), King of Spain",
-    "artist": "Velázquez (Diego Rodríguez de Silva y Velázquez)",
+    "artist": "Diego Velázquez",
     "artistBio": "Spanish, Seville 1599–1660 Madrid",
     "year": "probably 1624",
     "medium": "Oil on canvas",
@@ -10737,7 +10737,7 @@
   {
     "id": "met-437875",
     "title": "Portrait of a Man",
-    "artist": "Velázquez",
+    "artist": "Diego Velázquez",
     "artistBio": "Spanish, Seville 1599–1660 Madrid",
     "year": "ca. 1650",
     "medium": "Oil on canvas",
@@ -11026,7 +11026,7 @@
   {
     "id": "met-459001",
     "title": "Madonna Adoring the Child",
-    "artist": "Botticelli (Alessandro di Mariano Filipepi)",
+    "artist": "Sandro Botticelli",
     "artistBio": "Italian, Florence 1444/45–1510 Florence",
     "year": "ca. 1490–95",
     "medium": "Tempera and gold on wood",
@@ -13188,7 +13188,7 @@
   {
     "id": "cma-124008",
     "title": "Sleeping Youth (verso), Illustration from a Single Page Manuscript",
-    "artist": "Riza-yi Abbasi",
+    "artist": "Riza-yi 'Abbasi",
     "artistBio": "Riza-yi Abbasi (Iranian)",
     "year": "early 1600s",
     "medium": "opaque watercolor and gold on paper",
@@ -13429,7 +13429,7 @@
   {
     "id": "cma-140078",
     "title": "La Cervara, the Roman Campagna",
-    "artist": "Jean Baptiste Camille Corot",
+    "artist": "Camille Corot",
     "artistBio": "Jean Baptiste Camille Corot (French, 1796–1875)",
     "year": "c. 1830–31",
     "medium": "oil on fabric",
@@ -13495,7 +13495,7 @@
   {
     "id": "met-437854",
     "title": "Whalers",
-    "artist": "Joseph Mallord William Turner",
+    "artist": "J. M. W. Turner",
     "artistBio": "British, London 1775–1851 London",
     "year": "ca. 1845",
     "medium": "Oil on canvas",
@@ -13517,7 +13517,7 @@
   {
     "id": "met-437853",
     "title": "Venice, from the Porch of Madonna della Salute",
-    "artist": "Joseph Mallord William Turner",
+    "artist": "J. M. W. Turner",
     "artistBio": "British, London 1775–1851 London",
     "year": "ca. 1835",
     "medium": "Oil on canvas",
@@ -13862,7 +13862,7 @@
   {
     "id": "cma-138430",
     "title": "Lormes:  Goat-Girl Sitting Beside a Stream in a Forest",
-    "artist": "Jean Baptiste Camille Corot",
+    "artist": "Camille Corot",
     "artistBio": "Jean Baptiste Camille Corot (French, 1796–1875)",
     "year": "1842",
     "medium": "oil on fabric",
@@ -14384,7 +14384,7 @@
   {
     "id": "cma-126773",
     "title": "Woman Meditating",
-    "artist": "Jean Baptiste Camille Corot",
+    "artist": "Camille Corot",
     "artistBio": "Jean Baptiste Camille Corot (French, 1796–1875)",
     "year": "after 1868",
     "medium": "oil on fabric",
@@ -14670,7 +14670,7 @@
   {
     "id": "met-437852",
     "title": "Saltash with the Water Ferry, Cornwall",
-    "artist": "Joseph Mallord William Turner",
+    "artist": "J. M. W. Turner",
     "artistBio": "British, London 1775–1851 London",
     "year": "1811",
     "medium": "Oil on canvas",
@@ -14887,7 +14887,7 @@
   {
     "id": "cma-128371",
     "title": "The Pond at the Entrance of the Woods",
-    "artist": "Jean Baptiste Camille Corot",
+    "artist": "Camille Corot",
     "artistBio": "Jean Baptiste Camille Corot (French, 1796–1875)",
     "year": "c. 1860–75",
     "medium": "oil on fabric",
