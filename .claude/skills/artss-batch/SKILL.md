@@ -13,22 +13,52 @@ adds 30 good works beats one that adds 50 padded ones.
 
 ## Target mix
 
-Current gaps, in priority order. Check the live counts before choosing a focus:
+785 of a target 1000. Check live counts before choosing a focus:
 
 ```bash
 python3 .claude/skills/artss-batch/scripts/stats.py
 ```
 
-| Bucket | Target | Notes |
-|--------|--------|-------|
-| Impressionism / Post-Impressionism | ~140 | biggest gap; van Gogh, Monet, Cézanne all under-represented |
-| South Asia | ~110 | existing 32 are all pre-1850 Mughal/Pahari; need Company School, Ravi Varma, early Bengal School |
-| East Asia | ~110 | China/Japan/Korea |
-| Renaissance + Baroque non-Dutch | ~150 | Italy, Spain |
-| Modern (licensed tier) | 30–40 | see "Modern tier" below — hand-curated only |
-| Dutch Golden Age | leave as-is | dilute by growth, do not cut |
+Batches 1–6 filled every regional and period bucket in the original plan.
+What remains is **not** more depth — it is the canonical works themselves.
+
+### Batches 7–8: the celebrated works (~215 to reach 1000)
+
+The collection has 785 artworks and is missing the Mona Lisa, Las Meninas,
+The Scream, Starry Night, The Birth of Venus, Girl with a Pearl Earring, The
+Garden of Earthly Delights, The Arnolfini Portrait, The Ambassadors, Hunters
+in the Snow, The Third of May, Liberty Leading the People, The Raft of the
+Medusa, Le Déjeuner sur l'herbe, A Bar at the Folies-Bergère, and the School
+of Athens. Fourteen major artists are absent entirely, including **Leonardo,
+Bosch, Friedrich, Géricault, Giorgione, Uccello, Piero della Francesca,
+Bonnard and Matisse**.
+
+The reason is structural: batches 1–5 harvested only the Met and Cleveland,
+and these works are in the Louvre, Prado, Uffizi, Rijksmuseum, National
+Gallery London, Alte Pinakothek and Kunsthistorisches. **Source them from
+Wikimedia Commons by named work, not by artist category** — search the
+specific painting, take the highest-resolution public-domain file.
+
+Still out of copyright reach and not worth attempting: Picasso, Matisse after
+1930, Kahlo, Hopper, Wyeth, Dalí, O'Keeffe, Rothko, Pollock, and every Indian
+modern after Sher-Gil (Husain, Souza, Raza, Gaitonde).
+
+### Regions still absent, and why that needs a decision
+
+Africa, Oceania and pre-Columbian America have **no** representation. Do not
+repeat the earlier reasoning that their museum holdings are "sculpture rather
+than painting" — that was a fact about what two American museums digitised,
+not about the traditions. Ethiopian illuminated manuscripts run continuously
+from the sixth century, Mesoamerican codices are painting, and Aboriginal
+Australian bark painting is among the longest continuous traditions anywhere.
+The real obstacles are copyright (most Aboriginal work is contemporary and
+rightly controlled by its communities) and repatriation-sensitive provenance.
+Ethiopian manuscript painting and Mesoamerican codices are both reachable and
+out of copyright. Raise this with the owner rather than deciding it silently.
 
 ## Sources
+
+
 
 All have open APIs and serve public-domain images:
 
