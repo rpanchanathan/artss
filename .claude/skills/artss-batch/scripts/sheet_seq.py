@@ -10,11 +10,23 @@ prints sold as paintings, frame-dominated plates and damaged canvases.
 """
 import json, urllib.request, urllib.parse, time, os, math, sys
 from PIL import Image, ImageDraw
+
+# Wikimedia asks for a descriptive User-Agent naming the tool and a way to
+# reach whoever is running it. Put your own contact here before running this;
+# a generic browser string is refused with a 429 that reads like rate limiting.
+UA_CONTACT = "artss-collection/1.0 (art screensaver; set-your-contact@example.com)"
+
+if "set-your-contact" in UA_CONTACT:
+    raise SystemExit(
+        "Set UA_CONTACT to a real contact address first.\n"
+        "Wikimedia serves 403 Forbidden for a placeholder contact, and this script\n"
+        "would otherwise report every image as unreachable."
+    )
+
 Image.MAX_IMAGE_PIXELS = None
-UA = {"User-Agent": "artss-collection/1.0 (offline art screensaver; rajesh@genwise.in)"}
+UA = {"User-Agent": UA_CONTACT}
 PATH = sys.argv[1] if len(sys.argv) > 1 else 'candidates.json'
 recs = json.load(open(PATH))
-os.makedirs('thumbs', exist_ok=True)
 # official thumbnail URLs from the API — never hand-constructed
 files = [r['sourceUrl'].rsplit('/',1)[-1] for r in recs]
 thumb = {}

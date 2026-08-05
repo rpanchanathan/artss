@@ -179,6 +179,11 @@ and the Tagores are in Indian collections, not American ones.
   files — Commons snaps to its own rendering buckets. The returned
   `thumbwidth`/`thumbheight` were also wrong for those files. Measure what is
   actually served; do not write the API's numbers into `w`/`h`.
+- **A placeholder contact in the User-Agent gets 403 Forbidden.** The scripts
+  ship with `set-your-contact@example.com` and refuse to run until it is
+  replaced — without that guard they report every image as unreachable, which
+  looks exactly like the two failure modes below. Wikimedia wants a real
+  address, not merely a well-formed one.
 - **A generic browser User-Agent is refused, and the refusal reads "Too many
   requests".** `upload.wikimedia.org` answered 89 of 104 image requests with
   429 and "your request does not comply with our robot policy" when the UA was

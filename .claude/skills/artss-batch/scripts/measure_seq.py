@@ -15,10 +15,25 @@ upright painting.
 """
 import json, urllib.request, time, sys
 from PIL import Image, ImageFile
+
+# Wikimedia asks for a descriptive User-Agent naming the tool and a way to
+# reach whoever is running it. Put your own contact here before running this;
+# a generic browser string is refused with a 429 that reads like rate limiting.
+UA_CONTACT = "artss-collection/1.0 (art screensaver; set-your-contact@example.com)"
+
+if "set-your-contact" in UA_CONTACT:
+    raise SystemExit(
+        "Set UA_CONTACT to a real contact address first.\n"
+        "Wikimedia serves 403 Forbidden for a placeholder contact, and this script\n"
+        "would otherwise report every image as unreachable."
+    )
+
 Image.MAX_IMAGE_PIXELS = None
-UA = {"User-Agent": "artss-collection/1.0 (offline art screensaver; rajesh@genwise.in)"}
-PATH = sys.argv[1] if len(sys.argv) > 1 else 'candidates.json'
+UA = {"User-Agent": UA_CONTACT}
+PATH = sys.argv[1] if len(sys.argv) > 1 else "candidates.json"
 recs = json.load(open(PATH))
+
+
 def dims(url):
     for attempt in range(3):
         p = ImageFile.Parser()
@@ -26,46 +41,23 @@ def dims(url):
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
                 for _ in range(300):
                     c = r.read(8192)
-                    if not c: break
+                    if not c:
+                        break
                     p.feed(c)
-                    if p.image: return p.image.size
+                    if p.image:
+                        return p.image.size
         except Exception:
-            time.sleep(5*(attempt+1))
+            time.sleep(5 * (attempt + 1))
     return (0, 0)
+
+
 for i, a in enumerate(recs, 1):
-    a['w'], a['h'] = dims(a['image'])
+    a["w"], a["h"] = dims(a["image"])
     if i % 15 == 0:
-        json.dump(recs, open(PATH,'w'), indent=1, ensure_ascii=False)
+        json.dump(recs, open(PATH, "w"), indent=1, ensure_ascii=False)
         print(f"  {i}/{len(recs)}", flush=True)
-    time.sleep(1.2)                       # sequential: a screensaver shows one at a time
-json.dump(recs, open(PATH,'w'), indent=1, ensure_ascii=False)
-bad = [a['title'] for a in recs if not a['w']]
-print(f"measured {len(recs)-len(bad)}/{len(recs)}", "unreachable:", bad)
-import json, urllib.request, time, sys
-from PIL import Image, ImageFile
-Image.MAX_IMAGE_PIXELS = None
-UA = {"User-Agent": "artss-collection/1.0 (offline art screensaver; rajesh@genwise.in)"}
-PATH = sys.argv[1] if len(sys.argv) > 1 else 'candidates.json'
-recs = json.load(open(PATH))
-def dims(url):
-    for attempt in range(3):
-        p = ImageFile.Parser()
-        try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
-                for _ in range(300):
-                    c = r.read(8192)
-                    if not c: break
-                    p.feed(c)
-                    if p.image: return p.image.size
-        except Exception:
-            time.sleep(5*(attempt+1))
-    return (0, 0)
-for i, a in enumerate(recs, 1):
-    a['w'], a['h'] = dims(a['image'])
-    if i % 15 == 0:
-        json.dump(recs, open(PATH,'w'), indent=1, ensure_ascii=False)
-        print(f"  {i}/{len(recs)}", flush=True)
-    time.sleep(1.2)                       # sequential: a screensaver shows one at a time
-json.dump(recs, open(PATH,'w'), indent=1, ensure_ascii=False)
-bad = [a['title'] for a in recs if not a['w']]
-print(f"measured {len(recs)-len(bad)}/{len(recs)}", "unreachable:", bad)
+    time.sleep(1.2)  # sequential: a screensaver shows one at a time
+
+json.dump(recs, open(PATH, "w"), indent=1, ensure_ascii=False)
+bad = [a["title"] for a in recs if not a["w"]]
+print(f"measured {len(recs) - len(bad)}/{len(recs)}", "unreachable:", bad)
