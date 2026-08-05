@@ -51,12 +51,35 @@ server that will serve a hotlinked page. Test with `new Image()` in Chrome,
 not with curl, because the failure is header-based and curl can be made to
 succeed where the browser cannot.
 
-Two filter traps that have already cost a batch:
+The National Gallery of Art has **no search API** — every documented endpoint
+404s. It publishes open data as CSVs on GitHub instead, which would work but
+is a bigger job than an API call. Existing NGA works in the collection came in
+by another route; don't expect to query for more.
+
+Filter traps that have each already cost a batch. All of them fail *silently* —
+they return a thin result that looks like a small collection rather than a
+broken query, which is why each one survived until someone noticed a famous
+artist missing:
+
+- **Strip diacritics on both sides when matching names.** Comparing
+  `"velazquez"` against the Met's `"Velázquez"` rejected every match and lost
+  *Juan de Pareja* and all the Zurbaráns. Same trap for Cézanne, Dürer, Miró.
+- **The Met's `artistOrCulture=true` returns zero** for "Vincent van Gogh"
+  (280 results without it). Do not use it.
 - AIC's `classification_title` is the *medium* ("oil on canvas"), not a type.
-  Filter on `artwork_type_title` instead. A "painting" test against the wrong
-  field silently rejects everything and looks like a thin result.
+  Filter on `artwork_type_title` instead.
 - The Met's `classification` **is** "Paintings". The two APIs disagree; check
   the field before filtering on it.
+- Scan depth matters. The Met's search returns prints and drawings before
+  paintings, so a shallow ID scan finds almost nothing. Use 300+ and fetch
+  objects concurrently or a batch takes hours.
+
+**Write results to disk after every artist.** A harvest killed partway with
+everything in memory loses the whole run.
+
+Sanity check before moving on: if a household name returns zero, that is a bug
+in the query, not a fact about the museum. Verify one by hand before accepting
+it.
 
 ## Hard filters
 
@@ -76,9 +99,12 @@ per reason so a batch that mostly bounced is visible rather than looking thin.
    frame, backing board or hanging cord rather than artwork. This is the
    failure mode for East Asian hanging scrolls and album folios, and it is
    only visible by looking. See the contact sheet step.
-5. **Duplicate** — no repeat `id`, and check title+artist against existing.
-   The collection already has legitimate repeated titles (six *Annunciation*s
-   as a `comparisonSet`), so match on artist+title, not title alone.
+5. **Duplicate** — dedupe on **image URL**, not artist+title. Rembrandt painted
+   several canvases titled "Self-Portrait" and the collection holds two
+   genuinely different ones (Met 1660, NGA 1659); keying on title deletes one.
+   Also watch for museum "parent" records that show several panels of a
+   triptych at once while the individual panels exist as separate records —
+   keep the panels, drop the composite.
 6. **Not a fragment** — no detail shots, no single manuscript pages of pure
    text, no coins or fragments. It has to work as a full screen.
 
@@ -137,6 +163,12 @@ Rules:
 3. Fetch and measure every image:
    `python3 .claude/skills/artss-batch/scripts/measure.py candidates.json`
 4. Apply the hard filters. Report rejects per reason.
+4b. Score ink coverage and drop blank pages:
+   `python3 .claude/skills/artss-batch/scripts/inkscore.py candidates.json --reject-below 0.15`
+   Essential for manuscript-heavy sources. It catches blank paper, faint
+   pencil sketches and objects photographed on a plain ground; it does **not**
+   catch calligraphy pages with illuminated borders, which score high. Pair it
+   with a keyword pass on the title and medium.
 5. **Contact sheet** — `python3 .claude/skills/artss-batch/scripts/sheet.py candidates.json`
    then Read the output image. Look at it. This is where mount-dominated
    scrolls, damaged works, near-duplicate compositions and bad crops get
