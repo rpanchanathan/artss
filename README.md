@@ -54,10 +54,16 @@ Every artwork carries tags for region, century and (where it belongs to one) mov
 - `?tags=impressionism,france` — all listed tags must match
 
 Tags in use include `impressionism`, `post-impressionism`, `dutch-golden-age`, `baroque`,
-`renaissance`, `romanticism`, `realism`, `ukiyo-e`, `south-asia`, `china`, `japan`, `persia`,
-`france`, `italy`, and `17th-century` through `20th-century`. Movement tags come from an
-explicit artist lookup rather than being inferred, so a work without a movement tag simply
+`renaissance`, `romanticism`, `realism`, `fauvism`, `ukiyo-e`, `south-asia`, `china`, `japan`,
+`persia`, `france`, `italy`, and `17th-century` through `20th-century`. Movement tags come from
+an explicit artist lookup rather than being inferred, so a work without a movement tag simply
 isn't classified — it hasn't been guessed at.
+
+Outside Europe and Asia the tags name the tradition rather than a movement: `africa`,
+`americas` and `oceania` at the top level, then `ethiopia`, `ancient-egypt`, `roman-egypt`,
+`nubia`, `ghana`, `mesoamerica`, `maya`, `andes`, `aboriginal-australia`, plus `manuscript`
+and `rock-art` for the medium. Works older than the era covered by the century tags carry
+`ancient` instead.
 
 ## Other URL options
 
@@ -69,9 +75,12 @@ Example: `https://rpanchanathan.github.io/artss/?tags=post-impressionism&intro=1
 ## What's in it
 
 - `index.html` — the whole app. No build step, no dependencies.
-- `artworks.json` — 785 entries. Images are hotlinked from six museums' open-access
-  collections: Cleveland Museum of Art, The Met, Rijksmuseum, Smithsonian, National Gallery
-  of Art DC, and the Victoria & Albert Museum.
+- `artworks.json` — 1,028 entries spanning 372 artists, from sixth-century Ethiopian
+  Gospel illumination and ancient Egyptian tomb painting to Matisse. Images are hotlinked
+  from six museums' open-access collections — Cleveland Museum of Art, The Met, Rijksmuseum,
+  Smithsonian, National Gallery of Art DC and the Victoria & Albert Museum — and from
+  Wikimedia Commons, which is the only route to works in the Louvre, Prado, Uffizi and
+  Kunsthistorisches, and to everything outside the Western canon.
 - `.claude/skills/artss-batch/` — the workflow and scripts for adding to the collection.
 
 Each entry looks like:
@@ -113,6 +122,14 @@ Two things that will bite you if you add works by hand:
 - **Horizontal handscrolls**: museum mid-size derivatives cap the *long* edge, so a
   120000×2834 scroll arrives as 3400×80 with its height destroyed and no usable middle size
   available. Anything outside a 0.33–3.0 aspect ratio is rejected.
+- **Wikimedia images**: fetch them one at a time with a descriptive User-Agent naming a
+  contact. A normal browser User-Agent gets refused as a robot, and the refusal arrives as
+  a 429 that reads like rate limiting — so a parallel fetch reports an entire batch as
+  broken when none of it is. Use `measure_seq.py` and `sheet_seq.py` for Commons.
+
+The skill file in `.claude/skills/artss-batch/` carries the rest: the traps each source has
+already cost a batch, and the sourcing decisions — including which traditions were left out
+of the non-Western material on copyright or cultural-restriction grounds, and why.
 
 ## Running locally
 
