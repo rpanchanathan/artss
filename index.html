@@ -44,6 +44,13 @@
   .header.show { opacity: 1; transform: translateY(0); }
   .header .title { font-size: 2.3vw; font-style: italic; margin: 0 0 0.3vw; line-height: 1.2; }
   .header .byline { font-size: 1.35vw; color: #d8cdb8; margin: 0 0 1.4vw; letter-spacing: 0.02em; }
+  /* Creative Commons licences require the credit to be shown, so works that
+     carry one get a visible line. Public-domain works get nothing. */
+  .header .credit {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.75vw; color: #8d867a;
+    margin: -1.1vw 0 1.2vw; letter-spacing: 0.02em;
+  }
   .panel {
     max-width: 78vw;
     padding-bottom: 3vw;
@@ -286,10 +293,17 @@ function buildSlide(art) {
   const { t4 } = breakpointsMs();
   const durSec = t4 / 1000 + 1.5;
 
+  // Public-domain works need no credit line; CC licences legally require one.
+  const needsCredit = /cc[ -]?(by|0)/i.test(art.license || '');
+  const credit = needsCredit
+    ? `<div class="credit">${escapeHtml(art.attribution || art.museum || '')} &middot; ${escapeHtml(art.license)}</div>`
+    : '';
+
   const header = `
     <div class="header">
       <div class="title">${escapeHtml(art.title)}</div>
-      <div class="byline">${escapeHtml(art.artist)} &middot; ${escapeHtml(art.year)}</div>
+      <div class="byline">${escapeHtml(art.artist)}${art.year ? ' &middot; ' + escapeHtml(art.year) : ''}</div>
+      ${credit}
       <div class="panel panel-scene">
         <h4>The Scene</h4>
         <p>${escapeHtml(art.sceneContext)}</p>

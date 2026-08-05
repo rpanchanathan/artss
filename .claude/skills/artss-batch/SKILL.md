@@ -41,6 +41,41 @@ All have open APIs and serve public-domain images:
 | NGA (Washington) | `https://api.nga.gov/art/` | |
 | V&A | `https://api.vam.ac.uk/v2/objects/search` | IIIF: use `/full/full/0/default.jpg`, not `/full/800,/` |
 | Smithsonian | `https://api.si.edu/openaccess/api/v1.0/search` | |
+| Wikimedia Commons | `https://commons.wikimedia.org/w/api.php` | The only route to the 20th century — see below. |
+
+### Wikimedia Commons
+
+The Met holds **nothing** post-1930 in the public domain, so the twentieth
+century is only reachable through Commons, which records a licence per file.
+It is also the only source for modern Indian painting — Ravi Varma, Sher-Gil
+and the Tagores are in Indian collections, not American ones.
+
+- **Use a descriptive User-Agent naming the tool and a contact.** A generic
+  browser string is rejected outright.
+- **Take dimensions from the API, never by downloading.** imageinfo returns
+  exact width/height. Downloading 500 images to measure them earns a 429.
+- **Thumbnails cannot be hand-constructed.** Take `thumburl` from the API with
+  `iiurlwidth`; guessed sizes return 400 whatever number you pick.
+- **Recurse one level into subcategories.** The bulk of a painter's work sits
+  in `... by title` / `by year` / `by decade`, so a flat categorymembers query
+  returns almost nothing for the best-covered artists.
+- **Rate limits look exactly like broken data.** Three separate times a burst
+  produced hundreds of "unreachable" images that were all fine at 3-4s
+  spacing. Before concluding a source is broken, retest a few slowly.
+- **Categories are far dirtier than museum classifications.** Expect in-situ
+  mural photographs, gallery installation shots, newspaper clippings, book
+  scans, detail crops, and objects merely *derived* from a painting (a
+  Mondrian dress, a Red Fort photo filed under Tagore). Title filtering plus a
+  contact sheet is mandatory here, not optional.
+- **EXIF-rotated photos report swapped w/h.** A stored portrait that measures
+  landscape is usually a phone snapshot of a painting in a gallery rather than
+  a reproduction — check rather than just correcting the numbers.
+
+**Licensing.** Accept only public domain, CC0 and CC-BY variants; record the
+exact licence string. CC licences require visible credit, so fetch the file's
+`Artist`/`Credit` fields for an attribution — the painter is long dead, so the
+rights holder is whoever made the reproduction. `index.html` renders a credit
+line for any work whose licence matches `cc[ -]?(by|0)`.
 
 Prefer breadth of source — a batch drawn from one museum inherits that
 museum's collecting bias.
