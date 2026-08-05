@@ -169,6 +169,13 @@ Rules:
    pencil sketches and objects photographed on a plain ground; it does **not**
    catch calligraphy pages with illuminated borders, which score high. Pair it
    with a keyword pass on the title and medium.
+
+   **Set the floor by tradition, not by habit.** 0.15 suits South Asian
+   miniatures. It is wrong for East Asia: at 0.15 it dropped 55 works and cut
+   China from 73 to 31, because literati painting is deliberately monochrome
+   ink on paper and the filter was scoring the tradition's defining quality as
+   a defect. Use 0.05 there. Check what a floor removes before accepting it -
+   if a whole region collapses, the filter is measuring the wrong thing.
 5. **Contact sheet** — `python3 .claude/skills/artss-batch/scripts/sheet.py candidates.json`
    then Read the output image. Look at it. This is where mount-dominated
    scrolls, damaged works, near-duplicate compositions and bad crops get
