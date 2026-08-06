@@ -204,7 +204,7 @@
 <body>
 <div id="stage"></div>
 <div class="progress" id="progress"></div>
-<div id="hint">&#9881; menu &middot; space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; &uarr;/&darr;: show more/less often</div>
+<div id="hint">&#9881; menu &middot; space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; &uarr;/&darr;: show more/less often &middot; s: sound</div>
 <div id="toast"></div>
 
 <!-- On-screen controls (mirror the keyboard actions, for touch/TV) -->
@@ -244,6 +244,13 @@
         <button data-layout="fit">Full frame</button>
       </div>
     </div>
+    <div class="row">
+      <label>Sound</label>
+      <div class="seg" id="m-drone">
+        <button data-drone="0">Silent</button>
+        <button data-drone="1">Drone</button>
+      </div>
+    </div>
     <div class="actions">
       <button class="apply" id="m-apply">Show these</button>
       <button class="reset" id="m-reset">Reset</button>
@@ -253,6 +260,8 @@
       Auto picks a layout per painting (tall ones get split view). Split view forces the
       painting-left, text-right layout on everything; Full frame fills the screen and overlays
       the text. Filters combine — an artist and a movement together show only works matching both.
+      Sound applies straight away (the <b>s</b> key does the same) and is remembered per device;
+      the other settings need <i>Show these</i>.
     </div>
   </div>
 </div>
@@ -574,6 +583,7 @@ document.addEventListener('keydown', (e) => {
   else if (k === 'ArrowLeft' || c === 'ArrowLeft') prev();
   else if (k === 'ArrowUp' || c === 'ArrowUp' || k === '+' || c === 'Equal' || c === 'NumpadAdd') adjustFrequency(1.6, 'Will show this more often');
   else if (k === 'ArrowDown' || c === 'ArrowDown' || k === '-' || c === 'Minus' || c === 'NumpadSubtract') adjustFrequency(1 / 1.6, 'Will show this less often');
+  else if (k === 's' || k === 'S') setDrone(!drone.on, true);
   hintEl.classList.remove('hidden');
   clearTimeout(window._hintTimer);
   window._hintTimer = setTimeout(() => hintEl.classList.add('hidden'), 4000);
@@ -614,6 +624,136 @@ const CONTROL_ACTS = {
 document.getElementById('controls').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-act]');
   if (btn) CONTROL_ACTS[btn.dataset.act]?.();
+});
+
+// ---- Ambient drone ----
+// Synthesised rather than played from a file: there is no track to license, and
+// nothing loops. A recorded loop turns unbearable on something meant to run for
+// years — this drifts continuously and never lands in the same place twice.
+//
+// A low root carries a handful of partials, each fading in and out on its own
+// slow LFO, and the root itself moves through a pentatonic set every few
+// minutes. Kept under a lowpass so it stays a floor rather than a melody.
+const DRONE_KEY = 'artss-drone-v1';
+// Pentatonic, so any two roots sounding together during a change are still
+// consonant — there is no leading tone to clash. Pitched at D2–B2 rather than
+// an octave lower because TV speakers roll off below roughly 150Hz, and a
+// drone the television cannot reproduce is just a silent CPU load.
+const DRONE_ROOTS = [73.42, 82.41, 98.00, 110.00, 123.47];
+// 4.02 rather than 4 puts that partial slightly out with the octave above,
+// which beats against it every few seconds and keeps the texture moving.
+const DRONE_PARTIALS = [1, 2, 3, 4.02, 6];
+const DRONE_LEVEL = 0.055;
+
+const drone = { ctx: null, master: null, oscs: [], rootTimer: null, on: false };
+
+function droneBuild() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return false;
+  const ctx = new AC();
+  const master = ctx.createGain();
+  master.gain.value = 0;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 900;
+  lp.Q.value = 0.6;
+  master.connect(lp);
+  lp.connect(ctx.destination);
+
+  drone.oscs = DRONE_PARTIALS.map((mult, i) => {
+    const osc = ctx.createOscillator();
+    osc.type = i === 0 ? 'sine' : 'triangle';
+    osc.frequency.value = DRONE_ROOTS[0] * mult;
+    // A few cents off true harmonic ratio, differently per partial, so the
+    // stack never phase-locks into an organ-like sound.
+    osc.detune.value = (Math.random() - 0.5) * 14;
+
+    const g = ctx.createGain();
+    const base = 0.5 / (i + 1);
+    g.gain.value = base;
+
+    // Breathing. The periods (23s, 34.7s, 46.4s, ...) share no common multiple
+    // in any listening span, so the partials never all swell together twice.
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 1 / (23 + i * 11.7);
+    const amt = ctx.createGain();
+    amt.gain.value = base * 0.8;   // swings between 0.2x and 1.8x of base
+    lfo.connect(amt);
+    amt.connect(g.gain);           // sums with g.gain.value
+
+    osc.connect(g);
+    g.connect(master);
+    osc.start();
+    lfo.start();
+    return { osc, mult };
+  });
+
+  drone.ctx = ctx;
+  drone.master = master;
+  return true;
+}
+
+// Glide every partial to a new root over ~14s, then schedule the next move.
+// Long enough that the change registers as the room shifting rather than as a
+// chord progression.
+function droneDrift() {
+  const { ctx } = drone;
+  const root = DRONE_ROOTS[Math.floor(Math.random() * DRONE_ROOTS.length)];
+  drone.oscs.forEach(({ osc, mult }) => {
+    osc.frequency.cancelScheduledValues(ctx.currentTime);
+    osc.frequency.setValueAtTime(osc.frequency.value, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(root * mult, ctx.currentTime + 14);
+  });
+  drone.rootTimer = setTimeout(droneDrift, (150 + Math.random() * 120) * 1000);
+}
+
+function droneStart() {
+  if (!drone.ctx && !droneBuild()) return false;
+  drone.ctx.resume();
+  drone.master.gain.cancelScheduledValues(drone.ctx.currentTime);
+  drone.master.gain.setTargetAtTime(DRONE_LEVEL, drone.ctx.currentTime, 4);
+  if (!drone.rootTimer) droneDrift();
+  return true;
+}
+
+function droneStop() {
+  if (!drone.ctx) return;
+  drone.master.gain.cancelScheduledValues(drone.ctx.currentTime);
+  drone.master.gain.setTargetAtTime(0, drone.ctx.currentTime, 2);
+  clearTimeout(drone.rootTimer);
+  drone.rootTimer = null;
+  // Left running at zero gain rather than torn down, so re-enabling picks the
+  // texture up mid-breath instead of restarting it.
+}
+
+function setDrone(on, announce) {
+  drone.on = on;
+  try { localStorage.setItem(DRONE_KEY, on ? '1' : '0'); } catch {}
+  if (on) droneStart(); else droneStop();
+  document.querySelectorAll('#m-drone button').forEach(b =>
+    b.classList.toggle('on', (b.dataset.drone === '1') === on));
+  if (announce) showToast(on ? 'Drone on' : 'Silent');
+}
+
+(function initDrone() {
+  const p = new URLSearchParams(location.search);
+  const stored = (() => { try { return localStorage.getItem(DRONE_KEY); } catch { return null; } })();
+  const want = p.has('drone') ? p.get('drone') !== '0' : stored === '1';
+  setDrone(want, false);
+  // A browser will not open an audio context until it has seen a real input
+  // event, and this page is normally launched from an ADB intent with no
+  // keypress behind it. So if the drone was already on from a previous session,
+  // arm it to come up on the first input of any kind, whenever that arrives.
+  if (want && drone.ctx && drone.ctx.state === 'suspended') {
+    const unlock = () => { if (drone.on) droneStart(); };
+    ['keydown', 'pointerdown', 'touchstart'].forEach(ev =>
+      document.addEventListener(ev, unlock, { once: true, passive: true }));
+  }
+})();
+
+document.getElementById('m-drone').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-drone]');
+  if (btn) setDrone(btn.dataset.drone === '1', true);
 });
 
 // ---- Filter / layout menu ----

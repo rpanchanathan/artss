@@ -23,6 +23,7 @@ Each painting runs through four phases:
 | ← | previous painting |
 | → | skip to next phase |
 | ↑ / ↓ (or + / −) | show this painting more / less often |
+| s | ambient drone on / off |
 
 Arrow keys mean a TV remote works as-is. The numeric keypad works as arrows too (with Num Lock
 off, numpad 8/4/6/2 act as ↑/←/→/↓).
@@ -44,6 +45,23 @@ without keys:
 The ↑/↓ frequency preference is stored per device in `localStorage`, along with a seen count —
 paintings you've watched a lot drift back in the rotation, ones you nudge up come round sooner.
 Nothing is ever excluded outright.
+
+## Sound
+
+Off by default. `s`, or the **Sound** row in the ⚙ menu, turns on an ambient drone — a low bed
+that sits under the paintings without ever becoming music you'd listen to.
+
+It is synthesised in the browser rather than played from a file, so there's no track to license
+and, more to the point, nothing loops. Five partials over a low root each fade in and out on
+their own slow cycle (23s, 35s, 46s and so on — no common multiple, so they never all swell
+together twice), and every two to four minutes the root glides to another note of a pentatonic
+set over fourteen seconds. Pitched at D2–B2 because TV speakers roll off below about 150Hz and
+a drone the television can't reproduce is just a silent CPU load.
+
+The preference is stored per device. One catch on the TV: browsers won't start audio until
+they've seen a real input event, and the ADB launch below supplies none — so after launching,
+send any keypress (`adb shell input keyevent 52`) and the drone comes up. `?drone=1` turns it on
+from the URL, still subject to that first keypress.
 
 ## Layout
 
@@ -85,6 +103,30 @@ and `rock-art` for the medium. Works older than the era covered by the century t
 
 - `?intro=20&scene=30&bigDeal=30&outro=45` — phase durations in seconds
 - `?shuffle=0` — play in file order instead of shuffled
+- `?drone=1` — start with the ambient drone on (`?drone=0` forces it off)
+
+## On the TV
+
+The Android TV (TCL, `10.0.0.32`) runs it in TV Bro. Launch and unmute:
+
+```
+adb connect 10.0.0.32:5555
+adb -s 10.0.0.32:5555 shell am start -a android.intent.action.VIEW \
+  -d "https://rpanchanathan.github.io/artss/" com.phlox.tvwebbrowser
+sleep 8 && adb -s 10.0.0.32:5555 shell input keyevent 52   # any key; unlocks audio
+```
+
+The remote's d-pad covers the keyboard controls, but the ⚙ menu needs a pointer. Three ways to
+get one: a USB keyboard or mouse in the TV's own USB port (it reports `android.hardware.usb.host`),
+a Bluetooth one paired to the TV, or — with no hardware at all — drive it from the Mac:
+
+```
+scrcpy -s 10.0.0.32:5555 --no-audio
+```
+
+That mirrors the TV into a window and forwards the Mac's mouse and keyboard to it, so the menu
+is clickable from the desk. Note the panel is genuinely 720p (`wm size` reports 1280×720 and
+offers no other mode), which is the ceiling on how much of the source images' detail ever lands.
 
 Example: `https://rpanchanathan.github.io/artss/?tags=post-impressionism&intro=10&scene=20`
 
