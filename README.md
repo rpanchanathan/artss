@@ -3,7 +3,7 @@
 **Live: https://rpanchanathan.github.io/artss/**
 
 Open it on any screen (TV, laptop, tablet), press F11 / hit fullscreen, and leave it running.
-It cycles through 785 paintings, each shown large with a short note on what was going on when
+It cycles through 1,028 paintings, each shown large with a short note on what was going on when
 it was painted and why it matters.
 
 ## How a slide plays
