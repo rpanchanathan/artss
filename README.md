@@ -1,6 +1,12 @@
 # artss — an art screensaver
 
-**Live: https://rpanchanathan.github.io/artss/**
+**Live: https://artss.pages.dev/**
+
+Also on GitHub Pages at `https://rpanchanathan.github.io/artss/`, but send people the
+`pages.dev` link. GitHub gives an account one `<user>.github.io` subdomain shared by every
+repo, so one bad page takes them all down — which happened. Cloudflare gives each project
+its own subdomain (`pages.dev` is on the Public Suffix List), so projects can't poison each
+other. See `~/code/wiki/incidents/2026-08-18-github-pages-safebrowsing-flag.md`.
 
 Open it on any screen (TV, laptop, tablet), press F11 / hit fullscreen, and leave it running.
 It cycles through 1,028 paintings, each shown large with a short note on what was going on when
@@ -141,7 +147,7 @@ The Android TV (TCL, `10.0.0.32`) runs it in TV Bro. Launch and unmute:
 ```
 adb connect 10.0.0.32:5555
 adb -s 10.0.0.32:5555 shell am start -a android.intent.action.VIEW \
-  -d "https://rpanchanathan.github.io/artss/" com.phlox.tvwebbrowser
+  -d "https://artss.pages.dev/" com.phlox.tvwebbrowser
 sleep 8 && adb -s 10.0.0.32:5555 shell input keyevent 52   # any key; unlocks audio
 ```
 
@@ -157,7 +163,7 @@ That mirrors the TV into a window and forwards the Mac's mouse and keyboard to i
 is clickable from the desk. Note the panel is genuinely 720p (`wm size` reports 1280×720 and
 offers no other mode), which is the ceiling on how much of the source images' detail ever lands.
 
-Example: `https://rpanchanathan.github.io/artss/?tags=post-impressionism&intro=10&scene=20`
+Example: `https://artss.pages.dev/?tags=post-impressionism&intro=10&scene=20`
 
 ## What's in it
 
@@ -226,3 +232,17 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000. Opening `index.html` as a `file://` URL won't work — the
 `artworks.json` fetch needs a server.
+
+## Deploying
+
+Cloudflare Pages, from the repo root:
+
+```
+CLOUDFLARE_API_TOKEN=$CLOUDFLARE_PAGES_TOKEN \
+  npx wrangler pages deploy . --project-name=artss --branch=main --commit-dirty=true
+```
+
+The token has to be inlined — wrangler does not read `~/.env`, and the variable literally
+named `CLOUDFLARE_API_TOKEN` there is a Workers-only token that fails every Pages call.
+
+GitHub Pages still deploys on push, so both stay current.
