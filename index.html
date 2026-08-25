@@ -876,8 +876,11 @@ const gearEl = document.getElementById('gear');
 
 // Format tags describe the frame, not the art — never useful as a filter.
 const FORMAT_TAGS = new Set(['portrait-format', 'landscape-format', 'square-format', 'screen']);
+// Hyphen-to-space plus title case reads correctly for every tag but one:
+// ukiyo-e is a single word and keeps its hyphen and its lowercase e.
+const TAG_LABELS = { 'ukiyo-e': 'Ukiyo-e' };
 function prettifyTag(t) {
-  return t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  return TAG_LABELS[t] || t.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 function populateMenu(all) {
   // Artists: every distinct name, alphabetical, minus the catch-all.
