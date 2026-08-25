@@ -199,17 +199,50 @@
   #menu .apply { background: #f2ede4; color: #111; border-color: #f2ede4; font-weight: bold; }
   #menu .reset, #menu .close { background: transparent; color: #cfc7b8; }
   #menu .hint2 { font-size: 12px; color: #8d867a; margin-top: 1.5em; line-height: 1.5; }
+
+  /* Studio View — a browsable grid of ready-made collections, for picking by
+     eye rather than by typing. Tap the grid icon next to the gear. A tile is
+     nothing but a set of the URL params the page already reads at load, so
+     choosing one goes through matchesFilters() exactly as a typed ?artist=
+     would; there is no second filtering path. */
+  #studioBtn { position: fixed; top: 2vh; left: calc(2vw + 52px);
+               width: 44px; height: 44px; font-size: 18px; }
+  #studio {
+    position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,0.94);
+    display: none; overflow-y: auto; pointer-events: auto;
+  }
+  #studio.open { display: block; }
+  #studio .wrap { padding: 4vh 4vw 6vh; font-family: Arial, Helvetica, sans-serif; color: #eee6d8; }
+  #studio h2 { font-family: Georgia, serif; font-style: italic; font-weight: normal;
+               margin: 0 0 0.2em; font-size: 30px; color: #f2ede4; }
+  #studio .sub { color: #8d867a; font-size: 14px; }
+  #studio h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;
+               color: #b8a98a; font-weight: normal; margin: 2.6em 0 1em; }
+  #studio .grid { display: grid; gap: 1.4vw;
+                  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  #studio .close2 { position: fixed; top: 2vh; right: 2vw; width: 44px; height: 44px; font-size: 22px; }
+  .tile {
+    cursor: pointer; background: #141414; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px; overflow: hidden; -webkit-tap-highlight-color: transparent;
+  }
+  .tile:hover { border-color: rgba(255,255,255,0.35); }
+  .tile:focus { outline: none; border-color: #b8a98a; box-shadow: 0 0 0 2px #b8a98a; }
+  .tile img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #0a0a0a; }
+  .tile .cap { padding: 10px 12px 12px; }
+  .tile .name { font-size: 15px; color: #f2ede4; }
+  .tile .n { font-size: 12px; color: #8d867a; margin-top: 3px; }
 </style>
 </head>
 <body>
 <div id="stage"></div>
 <div class="progress" id="progress"></div>
-<div id="hint">&#9881; menu &middot; space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; &uarr;/&darr;: show more/less often &middot; s: sound</div>
+<div id="hint">&#9881; menu &middot; &#9638; studio &middot; space: pause &middot; &larr;: prev painting &middot; &rarr;: skip to next phase &middot; &uarr;/&darr;: show more/less often &middot; s: sound</div>
 <div id="toast"></div>
 
 <!-- On-screen controls (mirror the keyboard actions, for touch/TV) -->
 <div id="ui">
   <div id="gear" class="ui-btn" title="Filters &amp; layout">&#9881;</div>
+  <div id="studioBtn" class="ui-btn" title="Studio &mdash; browse collections">&#9638;</div>
   <div id="controls">
     <div class="ui-btn" data-act="prev" title="Previous painting">&#9664;</div>
     <div class="ui-btn" data-act="less" title="Show this less often">&minus;</div>
@@ -263,6 +296,16 @@
       Sound applies straight away (the <b>s</b> key does the same) and is remembered per device;
       the other settings need <i>Show these</i>.
     </div>
+  </div>
+</div>
+
+<!-- Studio View — grid of ready-made collections -->
+<div id="studio">
+  <div class="ui-btn close2" id="st-close" title="Close">&times;</div>
+  <div class="wrap">
+    <h2>Studio</h2>
+    <div class="sub">Pick a collection and it starts playing. Arrow keys move, Enter chooses, Esc goes back.</div>
+    <div id="st-sections"></div>
   </div>
 </div>
 
@@ -577,6 +620,9 @@ document.addEventListener('keydown', (e) => {
   // With Num Lock off, numpad 8/4/6/2 report e.code 'Numpad8' etc. but
   // e.key 'ArrowUp'/'ArrowLeft'/'ArrowRight'/'ArrowDown' — checking e.key is
   // what makes a right-hand keypad drive the show.
+  // With the studio grid up, the arrows belong to the grid, not to the
+  // painting playing behind it.
+  if (studioOpen()) return;
   const k = e.key, c = e.code;
   if (c === 'Space' || k === ' ' || k === 'Spacebar') { e.preventDefault(); togglePause(); }
   else if (k === 'ArrowRight' || c === 'ArrowRight') skipForward();
@@ -842,8 +888,174 @@ document.getElementById('m-reset').addEventListener('click', () => {
 
 // 'm' or Escape from a real keyboard still open/close the menu.
 document.addEventListener('keydown', (e) => {
+  if (studioOpen()) return;   // the studio has its own key handling
   if (e.code === 'KeyM') menuEl.classList.contains('open') ? closeMenu() : openMenu();
   else if (e.code === 'Escape' && menuEl.classList.contains('open')) closeMenu();
+});
+
+// ---- Studio View ----
+// The gear menu is a filter: you already know the artist you want and you type
+// it. The studio is a browse: pictures first, pick by looking. It builds itself
+// from the same artist/tag counts populateMenu computes, so it stays correct as
+// the collection grows — nothing here is a hardcoded list of collections.
+const studioEl = document.getElementById('studio');
+const studioBtn = document.getElementById('studioBtn');
+const stSections = document.getElementById('st-sections');
+
+// A one-work "collection" is not worth a tile; these floors keep the grid to
+// sets big enough to watch for a while.
+const STUDIO_MIN_ARTIST = 8;
+const STUDIO_MIN_TAG = 20;
+const STUDIO_MAX_TILES = 18;
+
+let studioSource = [];
+let studioBuilt = false;
+
+function studioOpen() { return studioEl.classList.contains('open'); }
+
+function esc(str) {
+  return String(str).replace(/[&<>"]/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+// Tiles are ~190px wide, but the images behind them are full-resolution museum
+// masters — 200KB to 20MB each, and a grid asks for forty at once. Every source
+// we use exposes a smaller derivative through a predictable rewrite of the same
+// URL, so request that; if a rewrite ever stops working the tile falls back to
+// the original (see the error listener below).
+function thumbUrl(url) {
+  if (/\/full\/(full|max)\//.test(url))                 // IIIF: NGA, V&A, micr.io
+    return url.replace(/\/full\/(full|max)\//, '/full/500,/');
+  if (url.includes('images.metmuseum.org'))
+    return url.replace('/original/', '/web-large/');
+  if (url.includes('openaccess-cdn.clevelandart.org'))
+    return url.replace('_print.jpg', '_web.jpg');
+  if (url.includes('ids.si.edu/ids/deliveryService'))
+    return url + '&max=500';
+  // Wikimedia serves only a fixed list of thumbnail widths (500 is on it, 400
+  // is not). Anything already pointing at /thumb/ is small enough as it stands.
+  const m = url.match(/^(https:\/\/upload\.wikimedia\.org\/wikipedia\/commons)\/(\w)\/(\w\w)\/([^/]+\.jpg)$/i);
+  if (m) return `${m[1]}/thumb/${m[2]}/${m[3]}/${m[4]}/500px-${m[4]}`;
+  return url;
+}
+
+// Tiles crop to 4:3, so the widest work in the set loses the least to the crop.
+function heroFor(set) {
+  return set.reduce((best, a) => ratioOf(a) > ratioOf(best) ? a : best, set[0]);
+}
+
+function tileHtml(label, set, params) {
+  const hero = heroFor(set);
+  return `<div class="tile" tabindex="0" data-params="${esc(params)}">
+      <img loading="lazy" src="${esc(thumbUrl(hero.image))}" data-full="${esc(hero.image)}" alt="">
+      <div class="cap">
+        <div class="name">${esc(label)}</div>
+        <div class="n">${set.length} works</div>
+      </div>
+    </div>`;
+}
+
+function sectionHtml(title, tiles) {
+  if (!tiles.length) return '';
+  return `<h3>${esc(title)}</h3><div class="grid">${tiles.join('')}</div>`;
+}
+
+function buildStudio(all) {
+  const byArtist = {}, byTag = {};
+  all.forEach(a => {
+    if (a.artist && a.artist !== 'Unidentified artist') (byArtist[a.artist] = byArtist[a.artist] || []).push(a);
+    (a.tags || []).forEach(t => {
+      if (!FORMAT_TAGS.has(t)) (byTag[t] = byTag[t] || []).push(a);
+    });
+  });
+  const isPeriod = t => /(century|bce|ancient|medieval)/i.test(t);
+  const biggest = (groups, min, keep) => Object.entries(groups)
+    .filter(([k, set]) => set.length >= min && (!keep || keep(k)))
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, STUDIO_MAX_TILES);
+
+  const artistTiles = biggest(byArtist, STUDIO_MIN_ARTIST).map(([name, set]) =>
+    tileHtml(name, set, new URLSearchParams({ artist: name }).toString()));
+  const tagTiles = (min, keep) => biggest(byTag, min, keep).map(([tag, set]) =>
+    tileHtml(prettifyTag(tag), set, new URLSearchParams({ tags: tag }).toString()));
+
+  stSections.innerHTML = [
+    sectionHtml('Everything', [tileHtml('The whole collection', all, '')]),
+    sectionHtml('Artists', artistTiles),
+    sectionHtml('Movements & regions', tagTiles(STUDIO_MIN_TAG, t => !isPeriod(t))),
+    sectionHtml('Periods', tagTiles(STUDIO_MIN_ARTIST, isPeriod)),
+  ].join('');
+}
+
+function openStudio() {
+  if (!studioSource.length) return;           // artworks.json hasn't landed yet
+  if (!studioBuilt) { buildStudio(studioSource); studioBuilt = true; }
+  studioEl.classList.add('open');
+  const first = stSections.querySelector('.tile');
+  if (first) first.focus();
+}
+function closeStudio() { studioEl.classList.remove('open'); }
+
+// Picking a tile rewrites the URL and reloads, the same move the menu's
+// "Show these" makes. Layout and timing params already in the URL survive.
+function chooseTile(tile) {
+  const params = new URLSearchParams(location.search);
+  ['artist', 'tags'].forEach(k => params.delete(k));
+  new URLSearchParams(tile.dataset.params).forEach((v, k) => params.set(k, v));
+  location.search = params.toString();
+}
+
+// Image errors don't bubble, so catch them on the way down.
+stSections.addEventListener('error', (e) => {
+  const img = e.target;
+  if (img.tagName === 'IMG' && img.dataset.full && img.src !== img.dataset.full)
+    img.src = img.dataset.full;
+}, true);
+
+studioBtn.addEventListener('click', openStudio);
+document.getElementById('st-close').addEventListener('click', closeStudio);
+studioEl.addEventListener('click', (e) => {
+  const tile = e.target.closest('.tile');
+  if (tile) chooseTile(tile);
+});
+
+// D-pad navigation, because the whole point of the studio is that it works
+// from a sofa. Up/down move a full row, and the row width is read off the
+// laid-out grid rather than assumed.
+function moveFocus(dir) {
+  const tiles = [...studioEl.querySelectorAll('.tile')];
+  if (!tiles.length) return;
+  const here = tiles.indexOf(document.activeElement);
+  const i = here === -1 ? 0 : here;
+  let step = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+  if (!step) {
+    const row = tiles.filter(t => t.offsetTop === tiles[i].offsetTop).length || 1;
+    step = dir === 'up' ? -row : row;
+  }
+  const next = tiles[Math.min(tiles.length - 1, Math.max(0, i + step))];
+  if (next) next.focus();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!studioOpen()) {
+    // A TV remote's d-pad only sends arrows and Enter — no letter keys — so
+    // Enter is the studio's way in from the sofa. Not while the gear menu has
+    // a field focused, where Enter belongs to the field.
+    const typing = /^(INPUT|SELECT|BUTTON|TEXTAREA)$/.test(document.activeElement.tagName);
+    if (e.code === 'KeyG' || (e.key === 'Enter' && !menuEl.classList.contains('open') && !typing))
+      openStudio();
+    return;
+  }
+  const k = e.key;
+  if (k === 'Escape' || e.code === 'KeyG') closeStudio();
+  else if (k === 'Enter' && document.activeElement.classList.contains('tile'))
+    chooseTile(document.activeElement);
+  else if (k === 'ArrowLeft') moveFocus('left');
+  else if (k === 'ArrowRight') moveFocus('right');
+  else if (k === 'ArrowUp') moveFocus('up');
+  else if (k === 'ArrowDown') moveFocus('down');
+  else return;
+  e.preventDefault();
 });
 
 // A screensaver left running on a TV never reloads, so it would otherwise
@@ -881,6 +1093,7 @@ fetch('artworks.json')
   .then(data => {
     const all = data;
     populateMenu(all);
+    studioSource = all;
     artworks = all.filter(matchesFilters);
     if (!artworks.length) {
       stage.innerHTML = `<div style="color:#fff;padding:4vw;font-family:sans-serif">

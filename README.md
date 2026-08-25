@@ -24,6 +24,7 @@ Each painting runs through four phases:
 | → | skip to next phase |
 | ↑ / ↓ (or + / −) | show this painting more / less often |
 | s | ambient drone on / off |
+| g _or_ Enter | studio view on / off |
 
 Arrow keys mean a TV remote works as-is. The numeric keypad works as arrows too (with Num Lock
 off, numpad 8/4/6/2 act as ↑/←/→/↓).
@@ -37,10 +38,19 @@ without keys:
   style/movement/period from lists (no typing a substring), and choose the layout (Auto / Split
   view / Full frame). It writes the same URL parameters below and reloads, so there is one
   filtering path whether the choice came from a typed URL or a tap.
+- A **grid (▦) button, next to the gear** opens **Studio** — a page of tiles, one per
+  ready-made collection, each with a painting from it and a count. Tap one and it starts
+  playing that collection straight away. Use it when you want to pick by looking rather than
+  by knowing what to type. The tiles are built from the collection itself (artists with 8+
+  works, movements and regions with 20+, and every period), so they stay right as the
+  collection grows — there is no hand-maintained list.
 - A **control bar along the bottom** mirrors the keys: prev · less-often · pause · more-often ·
   skip. Both the gear and the bar fade out while idle and reappear on any pointer or touch.
 
-`m` or Esc also open/close the menu.
+`m` or Esc also open/close the menu; `g`, Enter or Esc do the same for the studio (Enter is
+there because a TV remote's d-pad sends no letters). Inside the studio
+the arrow keys move between tiles and Enter picks one, so a TV remote's d-pad drives it without
+a pointer.
 
 The ↑/↓ frequency preference is stored per device in `localStorage`, along with a seen count —
 paintings you've watched a lot drift back in the rotation, ones you nudge up come round sooner.
@@ -116,8 +126,8 @@ adb -s 10.0.0.32:5555 shell am start -a android.intent.action.VIEW \
 sleep 8 && adb -s 10.0.0.32:5555 shell input keyevent 52   # any key; unlocks audio
 ```
 
-The remote's d-pad covers the keyboard controls, but the ⚙ menu needs a pointer. Three ways to
-get one: a USB keyboard or mouse in the TV's own USB port (it reports `android.hardware.usb.host`),
+The remote's d-pad covers the keyboard controls and the ▦ studio (its tiles are d-pad
+navigable), but the ⚙ menu needs a pointer for its dropdowns. Three ways to get one: a USB keyboard or mouse in the TV's own USB port (it reports `android.hardware.usb.host`),
 a Bluetooth one paired to the TV, or — with no hardware at all — drive it from the Mac:
 
 ```
