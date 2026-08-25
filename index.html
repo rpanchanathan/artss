@@ -231,6 +231,32 @@
   .tile .cap { padding: 10px 12px 12px; }
   .tile .name { font-size: 15px; color: #f2ede4; }
   .tile .n { font-size: 12px; color: #8d867a; margin-top: 3px; }
+  .tile.picked { border-color: #b8a98a; background: #241f16; }
+  .tile .mark {
+    position: absolute; top: 8px; right: 8px; width: 26px; height: 26px;
+    border-radius: 50%; background: #b8a98a; color: #111;
+    display: none; align-items: center; justify-content: center; font-size: 15px;
+  }
+  .tile.picked .mark { display: flex; }
+  .tile .shot { position: relative; }
+  /* Room for the play bar, so the last row is never hidden behind it. */
+  #studio.picking .wrap { padding-bottom: 15vh; }
+  #playbar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 31;
+    display: none; align-items: center; gap: 1.5vw;
+    padding: 2vh 4vw; background: rgba(10,10,10,0.97);
+    border-top: 1px solid rgba(255,255,255,0.15);
+    font-family: Arial, Helvetica, sans-serif; color: #eee6d8;
+  }
+  #studio.picking #playbar { display: flex; }
+  #playbar .count { flex: 1; font-size: 15px; }
+  #playbar .count b { color: #f2ede4; }
+  #playbar button {
+    padding: 14px 28px; font-size: 16px; cursor: pointer; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.25); background: transparent; color: #cfc7b8;
+  }
+  #playbar button:focus { outline: none; box-shadow: 0 0 0 2px #b8a98a; }
+  #playbar .play { background: #f2ede4; color: #111; border-color: #f2ede4; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -304,8 +330,14 @@
   <div class="ui-btn close2" id="st-close" title="Close">&times;</div>
   <div class="wrap">
     <h2>Studio</h2>
-    <div class="sub">Pick a collection and it starts playing. Arrow keys move, Enter chooses, Esc goes back.</div>
+    <div class="sub">Pick one collection or several &mdash; they play together.
+      Arrow keys move, Enter picks and unpicks, and Down from the last row reaches Play. Esc goes back.</div>
     <div id="st-sections"></div>
+  </div>
+  <div id="playbar">
+    <div class="count" id="pb-count"></div>
+    <button id="pb-clear">Clear</button>
+    <button class="play" id="pb-play">Play</button>
   </div>
 </div>
 
@@ -329,6 +361,9 @@ const CONFIG = {
   layout: 'auto',
   filterArtist: null,
   filterTags: null,
+  // A union of collections, from the studio: ?sets=artist:Claude Monet|tag:baroque
+  // means "Monet OR anything baroque". Distinct from filterTags, which narrows.
+  sets: null,
 };
 // Anything narrower than this gets the tall half of the screen rather than
 // being letterboxed. 1.15 catches portrait and square works; a half-screen
@@ -349,6 +384,10 @@ const SCROLL_MAX_RATIO = 0.5;
   if (layout === 'split' || layout === 'fit' || layout === 'auto') CONFIG.layout = layout;
   if (p.has('artist')) CONFIG.filterArtist = p.get('artist').toLowerCase();
   if (p.has('tags')) CONFIG.filterTags = p.get('tags').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+  if (p.has('sets')) {
+    const sels = p.get('sets').split('|').map(s => s.trim()).filter(Boolean);
+    if (sels.length) CONFIG.sets = sels;
+  }
 })();
 
 function ratioOf(art) {
@@ -363,9 +402,25 @@ function isSplit(art) {
   return ratioOf(art) < SPLIT_MAX_RATIO;
 }
 
-// Filter by artist substring and/or tags. Tags match if the artwork carries
-// every tag asked for, so ?tags=impressionism,france narrows rather than widens.
+// One selector from a ?sets= list: 'artist:Claude Monet' or 'tag:baroque'.
+// Artist is a substring match, the same rule ?artist= has always used.
+function matchesSelector(art, sel) {
+  const cut = sel.indexOf(':');
+  if (cut === -1) return false;
+  const kind = sel.slice(0, cut), value = sel.slice(cut + 1).toLowerCase().trim();
+  if (!value) return false;
+  if (kind === 'artist') return (art.artist || '').toLowerCase().includes(value);
+  if (kind === 'tag') return (art.tags || []).some(t => t.toLowerCase() === value);
+  return false;
+}
+
+// Two filtering moods, and they are opposites, so they don't combine:
+//   ?artist= / ?tags=  narrow  — an artist AND every tag listed must match
+//   ?sets=             widen   — match ANY collection in the list (the studio)
+// Whichever the viewer used last is the one in the URL; the menu and the studio
+// each clear the other's parameters when they write.
 function matchesFilters(art) {
+  if (CONFIG.sets) return CONFIG.sets.some(sel => matchesSelector(art, sel));
   if (CONFIG.filterArtist && !art.artist.toLowerCase().includes(CONFIG.filterArtist)) return false;
   if (CONFIG.filterTags) {
     const tags = (art.tags || []).map(t => t.toLowerCase());
@@ -878,11 +933,12 @@ document.getElementById('m-apply').addEventListener('click', () => {
   tags ? params.set('tags', tags) : params.delete('tags');
   chosenLayout && chosenLayout !== 'auto'
     ? params.set('layout', chosenLayout) : params.delete('layout');
+  params.delete('sets');           // the menu narrows; a studio union would fight it
   location.search = params.toString();
 });
 document.getElementById('m-reset').addEventListener('click', () => {
   const params = new URLSearchParams(location.search);
-  ['artist', 'tags', 'layout'].forEach(k => params.delete(k));
+  ['artist', 'tags', 'sets', 'layout'].forEach(k => params.delete(k));
   location.search = params.toString();
 });
 
@@ -944,10 +1000,15 @@ function heroFor(set) {
   return set.reduce((best, a) => ratioOf(a) > ratioOf(best) ? a : best, set[0]);
 }
 
-function tileHtml(label, set, params) {
+// `sel` is the selector this tile stands for ('artist:Claude Monet', 'tag:baroque'),
+// or '' for the whole-collection tile, which is an action rather than a choice.
+function tileHtml(label, set, sel) {
   const hero = heroFor(set);
-  return `<div class="tile" tabindex="0" data-params="${esc(params)}">
-      <img loading="lazy" src="${esc(thumbUrl(hero.image))}" data-full="${esc(hero.image)}" alt="">
+  return `<div class="tile" tabindex="0" data-sel="${esc(sel)}">
+      <div class="shot">
+        <img loading="lazy" src="${esc(thumbUrl(hero.image))}" data-full="${esc(hero.image)}" alt="">
+        <div class="mark">&#10003;</div>
+      </div>
       <div class="cap">
         <div class="name">${esc(label)}</div>
         <div class="n">${set.length} works</div>
@@ -975,9 +1036,9 @@ function buildStudio(all) {
     .slice(0, STUDIO_MAX_TILES);
 
   const artistTiles = biggest(byArtist, STUDIO_MIN_ARTIST).map(([name, set]) =>
-    tileHtml(name, set, new URLSearchParams({ artist: name }).toString()));
+    tileHtml(name, set, 'artist:' + name));
   const tagTiles = (min, keep) => biggest(byTag, min, keep).map(([tag, set]) =>
-    tileHtml(prettifyTag(tag), set, new URLSearchParams({ tags: tag }).toString()));
+    tileHtml(prettifyTag(tag), set, 'tag:' + tag));
 
   stSections.innerHTML = [
     sectionHtml('Everything', [tileHtml('The whole collection', all, '')]),
@@ -989,20 +1050,70 @@ function buildStudio(all) {
 
 function openStudio() {
   if (!studioSource.length) return;           // artworks.json hasn't landed yet
-  if (!studioBuilt) { buildStudio(studioSource); studioBuilt = true; }
+  if (!studioBuilt) {
+    buildStudio(studioSource);
+    studioBuilt = true;
+    // Reopening mid-show should reflect what is actually playing, so the
+    // viewer can add a collection to it rather than start again.
+    (CONFIG.sets || []).forEach(sel => {
+      const tile = stSections.querySelector(`.tile[data-sel="${CSS.escape(sel)}"]`);
+      if (tile) { picked.add(sel); tile.classList.add('picked'); }
+    });
+    refreshPlaybar();
+  }
   studioEl.classList.add('open');
   const first = stSections.querySelector('.tile');
   if (first) first.focus();
 }
 function closeStudio() { studioEl.classList.remove('open'); }
 
-// Picking a tile rewrites the URL and reloads, the same move the menu's
-// "Show these" makes. Layout and timing params already in the URL survive.
-function chooseTile(tile) {
+// ---- Selection ----
+// Tiles accumulate rather than replace, because "the impressionists" is three
+// or four tiles, not one. The picked set is a union: a work needs to match any
+// one of them. Picking is a plain toggle — an earlier version played the show
+// when you clicked an already-picked tile, which saved a keypress on a remote
+// but left no way at all to drop one collection from a selection of three.
+// Consistency won: click picks, click again unpicks, Play starts the show.
+const picked = new Set();
+
+function refreshPlaybar() {
+  studioEl.classList.toggle('picking', picked.size > 0);
+  if (!picked.size) return;
+  const sels = [...picked];
+  const n = studioSource.filter(a => sels.some(sel => matchesSelector(a, sel))).length;
+  const labels = [...studioEl.querySelectorAll('.tile.picked .name')].map(e => e.textContent);
+  document.getElementById('pb-count').innerHTML =
+    `<b>${n}</b> works &middot; ${esc(labels.join(', '))}`;
+}
+
+function togglePick(tile) {
+  const sel = tile.dataset.sel;
+  if (picked.has(sel)) picked.delete(sel); else picked.add(sel);
+  tile.classList.toggle('picked', picked.has(sel));
+  refreshPlaybar();
+}
+
+function clearPicks() {
+  picked.clear();
+  studioEl.querySelectorAll('.tile.picked').forEach(t => t.classList.remove('picked'));
+  refreshPlaybar();
+}
+
+// Playing rewrites the URL and reloads, the same move the menu's "Show these"
+// makes. Layout and timing params already in the URL survive; the menu's
+// narrowing filters do not, since they say the opposite of a union.
+function play(sels) {
   const params = new URLSearchParams(location.search);
-  ['artist', 'tags'].forEach(k => params.delete(k));
-  new URLSearchParams(tile.dataset.params).forEach((v, k) => params.set(k, v));
+  ['artist', 'tags', 'sets'].forEach(k => params.delete(k));
+  if (sels.length) params.set('sets', sels.join('|'));
   location.search = params.toString();
+}
+
+// The whole-collection tile is an action, not a choice — it clears any filter
+// and plays the lot, which is also how you get back from a narrowed show.
+function activateTile(tile) {
+  if (!tile.dataset.sel) play([]);
+  else togglePick(tile);
 }
 
 // Image errors don't bubble, so catch them on the way down.
@@ -1016,8 +1127,10 @@ studioBtn.addEventListener('click', openStudio);
 document.getElementById('st-close').addEventListener('click', closeStudio);
 studioEl.addEventListener('click', (e) => {
   const tile = e.target.closest('.tile');
-  if (tile) chooseTile(tile);
+  if (tile) activateTile(tile);
 });
+document.getElementById('pb-play').addEventListener('click', () => play([...picked]));
+document.getElementById('pb-clear').addEventListener('click', clearPicks);
 
 // D-pad navigation, because the whole point of the studio is that it works
 // from a sofa. Up/down move a full row, and the row width is read off the
@@ -1025,6 +1138,19 @@ studioEl.addEventListener('click', (e) => {
 function moveFocus(dir) {
   const tiles = [...studioEl.querySelectorAll('.tile')];
   if (!tiles.length) return;
+  const bar = [...studioEl.querySelectorAll('#playbar button')];
+  const inBar = bar.indexOf(document.activeElement);
+
+  // The play bar is a second, one-row grid below the tiles.
+  if (inBar !== -1) {
+    if (dir === 'up') { (lastTile || tiles[0]).focus(); return; }
+    if (dir === 'left' || dir === 'right') {
+      const next = bar[Math.min(bar.length - 1, Math.max(0, inBar + (dir === 'left' ? -1 : 1)))];
+      if (next) next.focus();
+    }
+    return;
+  }
+
   const here = tiles.indexOf(document.activeElement);
   const i = here === -1 ? 0 : here;
   let step = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
@@ -1032,9 +1158,16 @@ function moveFocus(dir) {
     const row = tiles.filter(t => t.offsetTop === tiles[i].offsetTop).length || 1;
     step = dir === 'up' ? -row : row;
   }
+  // Falling off the bottom of the grid lands on Play, when there is one.
+  if (i + step > tiles.length - 1 && bar.length && studioEl.classList.contains('picking')) {
+    lastTile = tiles[i];
+    document.getElementById('pb-play').focus();
+    return;
+  }
   const next = tiles[Math.min(tiles.length - 1, Math.max(0, i + step))];
   if (next) next.focus();
 }
+let lastTile = null;
 
 document.addEventListener('keydown', (e) => {
   if (!studioOpen()) {
@@ -1049,7 +1182,8 @@ document.addEventListener('keydown', (e) => {
   const k = e.key;
   if (k === 'Escape' || e.code === 'KeyG') closeStudio();
   else if (k === 'Enter' && document.activeElement.classList.contains('tile'))
-    chooseTile(document.activeElement);
+    activateTile(document.activeElement);
+  else if (k === 'Enter') return;              // the play bar's own buttons
   else if (k === 'ArrowLeft') moveFocus('left');
   else if (k === 'ArrowRight') moveFocus('right');
   else if (k === 'ArrowUp') moveFocus('up');

@@ -39,16 +39,21 @@ without keys:
   view / Full frame). It writes the same URL parameters below and reloads, so there is one
   filtering path whether the choice came from a typed URL or a tap.
 - A **grid (▦) button, next to the gear** opens **Studio** — a page of tiles, one per
-  ready-made collection, each with a painting from it and a count. Tap one and it starts
-  playing that collection straight away. Use it when you want to pick by looking rather than
-  by knowing what to type. The tiles are built from the collection itself (artists with 8+
-  works, movements and regions with 20+, and every period), so they stay right as the
-  collection grows — there is no hand-maintained list.
+  ready-made collection, each with a painting from it and a count. Use it when you want to
+  pick by looking rather than by knowing what to type. The tiles are built from the collection
+  itself (artists with 8+ works, movements and regions with 20+, and every period), so they
+  stay right as the collection grows — there is no hand-maintained list.
+  Tap tiles to pick them and **Play** to start; tapping a picked tile again unpicks it.
+  Picking several plays them **together** — van Gogh *plus* Sher-Gil *plus* ukiyo-e is all
+  67 works, not the none that are all three. Reopening the studio mid-show shows what is
+  playing, so you can add a collection to it rather than start again.
 - A **control bar along the bottom** mirrors the keys: prev · less-often · pause · more-often ·
   skip. Both the gear and the bar fade out while idle and reappear on any pointer or touch.
 
 `m` or Esc also open/close the menu; `g`, Enter or Esc do the same for the studio (Enter is
-there because a TV remote's d-pad sends no letters). Inside the studio
+there because a TV remote's d-pad sends no letters). Inside the studio the arrow keys move
+between tiles, Enter picks and unpicks, and Down from the last row lands on **Play** — so a
+d-pad drives the whole thing. Inside the studio
 the arrow keys move between tiles and Enter picks one, so a TV remote's d-pad drives it without
 a pointer.
 
@@ -90,12 +95,26 @@ own layout from the artwork's aspect ratio:
 
 ## Filtering
 
-Either tap the **⚙ menu** (see above) and pick from lists, or set the parameters directly. Every
-artwork carries tags for region, century and (where it belongs to one) movement.
+Either tap the **⚙ menu** or the **▦ studio** (see above) and pick from lists, or set the
+parameters directly. Every artwork carries tags for region, century and (where it belongs to
+one) movement.
+
+There are two filtering moods, and they are opposites:
+
+**Narrowing** — every condition must hold. This is what the ⚙ menu writes.
 
 - `?artist=gogh` — substring match on artist name
 - `?tags=impressionism` — single tag
 - `?tags=impressionism,france` — all listed tags must match
+
+**Widening** — a union; a work needs to match any one of the collections listed. This is what
+the ▦ studio writes when you pick several tiles.
+
+- `?sets=artist:Claude Monet|tag:baroque` — Monet *or* anything baroque
+- `?sets=tag:ukiyo-e` — one collection, same as `?tags=ukiyo-e`
+
+`sets` and `artist`/`tags` say opposite things, so they don't combine: whichever you used last
+is the one in the URL, and the menu and the studio each clear the other's parameters.
 
 Tags in use include `impressionism`, `post-impressionism`, `dutch-golden-age`, `baroque`,
 `renaissance`, `romanticism`, `realism`, `fauvism`, `ukiyo-e`, `south-asia`, `china`, `japan`,
