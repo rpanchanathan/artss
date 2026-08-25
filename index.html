@@ -326,7 +326,7 @@
 </div>
 
 <!-- Studio View — grid of ready-made collections -->
-<div id="studio">
+<div id="studio" tabindex="-1">
   <div class="ui-btn close2" id="st-close" title="Close">&times;</div>
   <div class="wrap">
     <h2>Studio</h2>
@@ -1080,8 +1080,12 @@ function openStudio() {
     refreshPlaybar();
   }
   studioEl.classList.add('open');
-  const first = stSections.querySelector('.tile');
-  if (first) first.focus();
+  // Focus the panel, NOT the first tile. A TV remote's centre button arrives as
+  // a keydown that opens the studio and then activates whatever is focused —
+  // so focusing a tile here means one press opens the grid and instantly picks
+  // the tile under it. Landing on the container gives that stray activation
+  // nothing to hit; the first arrow press moves into the grid.
+  studioEl.focus();
 }
 function closeStudio() { studioEl.classList.remove('open'); }
 
