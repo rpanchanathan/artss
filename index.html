@@ -430,6 +430,15 @@ function matchesFilters(art) {
 }
 
 const stage = document.getElementById('stage');
+
+// Anything that can carry a browser exception message must go in as text, not
+// markup: exception text can quote whatever the URL contained.
+function showMessage(text) {
+  const box = document.createElement('div');
+  box.style.cssText = 'color:#fff;padding:4vw;font-family:sans-serif';
+  box.textContent = text;
+  stage.replaceChildren(box);
+}
 const progressEl = document.getElementById('progress');
 const hintEl = document.getElementById('hint');
 const toastEl = document.getElementById('toast');
@@ -899,10 +908,16 @@ function populateMenu(all) {
   const p = new URLSearchParams(location.search);
   document.getElementById('m-artist').value = p.get('artist') || '';
   const urlTags = (p.get('tags') || '').toLowerCase().split(',').map(s => s.trim());
-  if (urlTags.some(t => styleSel.querySelector(`option[value="${t}"]`)))
-    styleSel.value = urlTags.find(t => styleSel.querySelector(`option[value="${t}"]`));
-  if (urlTags.some(t => periodSel.querySelector(`option[value="${t}"]`)))
-    periodSel.value = urlTags.find(t => periodSel.querySelector(`option[value="${t}"]`));
+  // Compare against the options directly rather than building a CSS selector
+  // out of the URL. Interpolating URL text into querySelector() throws on
+  // anything with a quote in it, and the exception message carries the raw
+  // input — which used to reach an innerHTML error sink below and execute.
+  const optionFor = (sel, tags) =>
+    tags.find(t => [...sel.options].some(o => o.value === t));
+  const styleTag = optionFor(styleSel, urlTags);
+  if (styleTag) styleSel.value = styleTag;
+  const periodTag = optionFor(periodSel, urlTags);
+  if (periodTag) periodSel.value = periodTag;
   setLayoutButtons(CONFIG.layout);
 }
 
@@ -1230,8 +1245,7 @@ fetch('artworks.json')
     studioSource = all;
     artworks = all.filter(matchesFilters);
     if (!artworks.length) {
-      stage.innerHTML = `<div style="color:#fff;padding:4vw;font-family:sans-serif">
-        No artworks match that filter. ${all.length} in the collection.</div>`;
+      showMessage(`No artworks match that filter. ${all.length} in the collection.`);
       return;
     }
     if (artworks.length < all.length) {
@@ -1242,7 +1256,7 @@ fetch('artworks.json')
     setInterval(checkForUpdates, REFRESH_MS);
   })
   .catch(err => {
-    stage.innerHTML = `<div style="color:#fff;padding:4vw;font-family:sans-serif">Failed to load artworks.json: ${err}</div>`;
+    showMessage(`Failed to load artworks.json: ${err}`);
   });
 </script>
 </body>
